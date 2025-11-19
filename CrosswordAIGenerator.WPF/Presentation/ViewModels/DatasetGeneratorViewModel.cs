@@ -213,7 +213,7 @@ public partial class DatasetGeneratorViewModel : BaseViewModel
                     GridSizeColumns,
                     TargetWordCount,
                     null,
-                    string.IsNullOrWhiteSpace(HighlightedWord) ? null : HighlightedWord);
+                    string.IsNullOrWhiteSpace(HighlightedWord) ? null : HighlightedWord); // DatasetGeneratorViewModel nie ma dostępu do Settings - używa domyślnych
                 
                 // Obsłuż Result (ROP)
                 if (result.IsFailure)
@@ -387,7 +387,7 @@ public partial class DatasetGeneratorViewModel : BaseViewModel
                         minSize: minSizeForWords,
                         maxSize: maxSizeForWords,
                         targetWordCount: TargetWordCount, // Używane tylko gdy nie ma hasła
-                        highlightedWord: string.IsNullOrWhiteSpace(HighlightedWord) ? null : HighlightedWord);
+                        highlightedWord: string.IsNullOrWhiteSpace(HighlightedWord) ? null : HighlightedWord); // DatasetGeneratorViewModel nie ma dostępu do Settings - używa domyślnych
                 }
                 else
                 {
@@ -488,7 +488,8 @@ public partial class DatasetGeneratorViewModel : BaseViewModel
 
             if (saveDialog.ShowDialog() == true)
             {
-                _datasetGenerator.SaveDatasetToFile(DatasetEntries.ToList(), saveDialog.FileName);
+                // DatasetGeneratorViewModel nie ma dostępu do SettingsViewModel, więc użyj domyślnych ustawień (wszystko włączone)
+                _datasetGenerator.SaveDatasetToFile(DatasetEntries.ToList(), saveDialog.FileName, null);
                 StatusMessage = $"Zapisano do {saveDialog.FileName}";
                 MessageBox.Show($"Zapisano {DatasetEntries.Count} przykładów do pliku.", "Sukces", MessageBoxButton.OK, MessageBoxImage.Information);
             }

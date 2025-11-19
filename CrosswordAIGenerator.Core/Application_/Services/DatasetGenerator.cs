@@ -15,10 +15,38 @@ public class DatasetGenerator
 {
     private readonly IEmptyGridGenerator _gridGenerator;
     private readonly IXamlGenerator _xamlGenerator;
+    private readonly ICrossGridGenerator? _crossGridGenerator;
     private readonly IWordDictionary? _wordDictionary;
     private readonly CrosswordWordPlacer? _wordPlacer;
     private readonly IHighlightedWordGenerator? _wordGenerator;
     private readonly ICursorLogger? _logger;
+
+    /// <summary>
+    /// Waliduje wszystkie CrossGrid w datasetach
+    /// </summary>
+    public List<(string entryId, CrossGridValidationResult result)> ValidateCrossGridsInDataset(List<DatasetEntry> entries)
+    {
+        var results = new List<(string entryId, CrossGridValidationResult result)>();
+        
+        if (_crossGridGenerator == null)
+        {
+            _logger?.Warning("CrossGridGenerator nie jest dostępny - pomijam walidację");
+            return results;
+        }
+
+        foreach (var entry in entries)
+        {
+            if (string.IsNullOrWhiteSpace(entry.CrossGrid))
+            {
+                continue; // Pomijaj wpisy bez CrossGrid
+            }
+
+            var validationResult = _crossGridGenerator.ValidateCrossGrid(entry.CrossGrid);
+            results.Add((entry.Id, validationResult));
+        }
+
+        return results;
+    }
 
     
     /// <summary>
@@ -92,10 +120,12 @@ public class DatasetGenerator
         IWordDictionary? wordDictionary, 
         CrosswordWordPlacer wordPlacer, 
         IHighlightedWordGenerator? wordGenerator = null,
-        ICursorLogger? logger = null)
+        ICursorLogger? logger = null,
+        ICrossGridGenerator? crossGridGenerator = null)
     {
         _gridGenerator = gridGenerator ?? throw new ArgumentNullException(nameof(gridGenerator));
         _xamlGenerator = xamlGenerator ?? throw new ArgumentNullException(nameof(xamlGenerator));
+        _crossGridGenerator = crossGridGenerator;
         _wordDictionary = wordDictionary;
         _wordPlacer = wordPlacer ?? throw new ArgumentNullException(nameof(wordPlacer));
         _wordGenerator = wordGenerator;
@@ -241,18 +271,18 @@ public class DatasetGenerator
             return Result<DatasetEntry, string>.Failure(errorMsg);
         }
         
-        var xaml = _xamlGenerator.GenerateXaml(grid, 500, 500, highlightedCellsWithIndices, placedWords);
-        
-        // Generuj również pustą wersję (bez liter, tylko ramki i definicje)
-        var emptyXaml = _xamlGenerator.GenerateEmptyXaml(grid, 500, 500, highlightedCellsWithIndices, placedWords);
+        // Zawsze generuj wszystkie elementy (Settings kontrolują tylko eksport)
+        string xaml = _xamlGenerator.GenerateXaml(grid, 500, 500, highlightedCellsWithIndices, placedWords);
+        string? emptyXaml = _xamlGenerator.GenerateEmptyXaml(grid, 500, 500, highlightedCellsWithIndices, placedWords);
+        string? crossGrid = _crossGridGenerator?.GenerateCrossGrid(grid, highlightedCellsWithIndices, placedWords);
         
         // Zlicz litery i ściany (letterCount już policzone wyżej)
         int wallCount = grid.Cells.Values.Count(c => c.IsWall);
         int emptyCount = grid.Cells.Values.Count(c => c.IsEmpty);
         
-        var description = GenerateWordsDescription(grid, rows, columns, letterCount, placedWords, highlightedWord);
-        var searchableText = GenerateWordsSearchableText(grid, rows, columns, letterCount, xaml, placedWords, highlightedWord);
-        var embeddingText = GenerateWordsEmbeddingText(grid, rows, columns, letterCount, placedWords, highlightedWord);
+        string description = GenerateWordsDescription(grid, rows, columns, letterCount, placedWords, highlightedWord);
+        string searchableText = GenerateWordsSearchableText(grid, rows, columns, letterCount, xaml, placedWords, highlightedWord);
+        string embeddingText = GenerateWordsEmbeddingText(grid, rows, columns, letterCount, placedWords, highlightedWord);
 
         var entry = new DatasetEntry
         {
@@ -262,6 +292,7 @@ public class DatasetGenerator
             HasWalls = wallCount > 0,
             Xaml = xaml,
             EmptyXaml = emptyXaml,
+            CrossGrid = crossGrid,
             Description = description,
             SearchableText = searchableText,
             Metadata = new DatasetMetadata
@@ -472,15 +503,14 @@ public class DatasetGenerator
 
         var (grid, placedWords, highlightedCellsWithIndices) = result.Value;
 
-        var xaml = _xamlGenerator.GenerateXaml(grid, width: 500, height: 500, highlightedCellsWithIndices, placedWords, wordDefinitions);
+        // Zawsze generuj wszystkie elementy (Settings kontrolują tylko eksport)
+        string xaml = _xamlGenerator.GenerateXaml(grid, width: 500, height: 500, highlightedCellsWithIndices, placedWords, wordDefinitions);
+        string? emptyXaml = _xamlGenerator.GenerateEmptyXaml(grid, width: 500, height: 500, highlightedCellsWithIndices, placedWords, wordDefinitions);
+        string? crossGrid = _crossGridGenerator?.GenerateCrossGrid(grid, highlightedCellsWithIndices, placedWords);
         
-        // Generuj również pustą wersję (bez liter, tylko ramki i definicje)
-        var emptyXaml = _xamlGenerator.GenerateEmptyXaml(grid, width: 500, height: 500, highlightedCellsWithIndices, placedWords, wordDefinitions);
-        
-        // Generuj opis z definicjami
-        var description = GenerateCustomWordsDescription(highlightedWord, customWords, placedWords);
-        var searchableText = GenerateSearchableTextForCustomWords(highlightedWord, customWords, placedWords, rows, columns, xaml);
-        var embeddingText = GenerateEmbeddingTextForCustomWords(highlightedWord, customWords, placedWords, rows, columns);
+        string description = GenerateCustomWordsDescription(highlightedWord, customWords, placedWords);
+        string searchableText = GenerateSearchableTextForCustomWords(highlightedWord, customWords, placedWords, rows, columns, xaml);
+        string embeddingText = GenerateEmbeddingTextForCustomWords(highlightedWord, customWords, placedWords, rows, columns);
 
         var entry = new DatasetEntry
         {
@@ -490,6 +520,7 @@ public class DatasetGenerator
             HasWalls = false,
             Xaml = xaml,
             EmptyXaml = emptyXaml,
+            CrossGrid = crossGrid,
             Description = description,
             SearchableText = searchableText,
             Metadata = new DatasetMetadata
@@ -503,7 +534,7 @@ public class DatasetGenerator
             RagMetadata = new RagMetadata
             {
                 EmbeddingText = embeddingText,
-                Category = "crossword_custom_words",
+                Category = "custom_words",
                 Timestamp = DateTime.UtcNow
             }
         };
@@ -557,7 +588,7 @@ public class DatasetGenerator
                     currentRows = Math.Min(rows + 3, 25);
                     currentCols = Math.Min(columns + 3, 25);
                     _logger?.InfoFormat("GenerateCustomWordsDataset: Retry z większą siatką {0}x{1}", currentRows, currentCols);
-                    var retryResult = GenerateWithCustomWords(currentRows, currentCols, highlightedWord, customWords, minWordsCount);
+                    var retryResult = GenerateWithCustomWords(currentRows, currentCols, highlightedWord, customWords, minWordsCount: minWordsCount);
                     if (retryResult.IsSuccess)
                     {
                         results.Add(retryResult.Value);
@@ -846,17 +877,194 @@ public class DatasetGenerator
     /// <summary>
     /// Zapisuje dataset do pliku JSON
     /// </summary>
-    public void SaveDatasetToFile(List<DatasetEntry> entries, string filePath)
+    /// <summary>
+    /// Zapisuje dataset do pliku JSON, filtrując pola zgodnie z Settings
+    /// </summary>
+    public void SaveDatasetToFile(List<DatasetEntry> entries, string filePath, DatasetSettings? settings = null)
     {
+        // Jeśli nie podano settings, eksportuj wszystko (domyślne zachowanie)
+        settings ??= new DatasetSettings { IncludeXaml = true, IncludeEmptyXaml = true, IncludeCrossGrid = true, IncludeScreenshot = true, IncludeDescription = true, IncludeSearchableText = true, IncludeEmbeddingText = true };
+        
+        // Utwórz kopie entries z wyfiltrowanymi polami
+        var filteredEntries = entries.Select(entry => new DatasetEntry
+        {
+            Id = entry.Id,
+            Type = entry.Type,
+            GridSize = entry.GridSize,
+            HasWalls = entry.HasWalls,
+            Xaml = settings.IncludeXaml ? entry.Xaml : string.Empty,
+            EmptyXaml = settings.IncludeEmptyXaml ? entry.EmptyXaml : null,
+            CrossGrid = settings.IncludeCrossGrid ? entry.CrossGrid : null,
+            Description = settings.IncludeDescription ? entry.Description : string.Empty,
+            SearchableText = settings.IncludeSearchableText ? entry.SearchableText : string.Empty,
+            Metadata = entry.Metadata,
+            RagMetadata = settings.IncludeEmbeddingText ? entry.RagMetadata : null
+        }).ToList();
+
         var options = new JsonSerializerOptions
         {
             WriteIndented = true,
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
         };
 
-        var json = JsonSerializer.Serialize(entries, options);
+        var json = JsonSerializer.Serialize(filteredEntries, options);
         File.WriteAllText(filePath, json);
     }
+
+    /// <summary>
+    /// Eksportuje dataset do JSONL (JSON Lines) w formacie gotowym do finetunowania (prompt, response)
+    /// Format: każdy wiersz to osobny obiekt JSON {"prompt": "...", "response": "..."}
+    /// 
+    /// Wymagania formatu:
+    /// - UTF-8 bez BOM (dla polskich znaków)
+    /// - Jeden JSON na linię (bez przecinków między liniami, bez nawiasów [])
+    /// - Prompt kończy się \n (newline) - model uczy się, że po tym zaczyna się odpowiedź
+    /// - Response zawsze zaczyna się od "# GRID\n"
+    /// - Spójny format CrossGrid (R0, R1, ... z [1], [2] dla highlighted cells)
+    /// 
+    /// Kompatybilne z: TRL SFTTrainer, Axolotl, LLaMA-Factory (input_column="prompt", output_column="response")
+    /// </summary>
+    public void ExportToFinetuneCsv(List<DatasetEntry> entries, string filePath)
+    {
+        var jsonLines = new List<string>();
+        
+        foreach (var entry in entries)
+        {
+            // Pomiń wpisy bez CrossGrid lub bez słów
+            if (string.IsNullOrWhiteSpace(entry.CrossGrid) || entry.Type == "empty_grid")
+            {
+                continue;
+            }
+            
+            // Wygeneruj prompt z informacji o krzyżówce
+            string prompt = GenerateFinetunePrompt(entry);
+            
+            // Response to CrossGrid (z sekcją # GRID)
+            string response = entry.CrossGrid.Trim();
+            
+            // Upewnij się, że response zaczyna się od # GRID
+            if (!response.StartsWith("# GRID"))
+            {
+                response = "# GRID\n" + response;
+            }
+            
+            // Normalizuj znaki nowej linii do \n
+            prompt = prompt.Replace("\r\n", "\n").Replace("\r", "\n");
+            response = response.Replace("\r\n", "\n").Replace("\r", "\n");
+            
+            // Utwórz obiekt JSON
+            var jsonObject = new
+            {
+                prompt = prompt,
+                response = response
+            };
+            
+            // Serializuj do JSON (bez formatowania, jeden wiersz)
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = false,
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
+            
+            string jsonLine = JsonSerializer.Serialize(jsonObject, options);
+            jsonLines.Add(jsonLine);
+        }
+        
+        // Zapisz jako UTF-8 bez BOM (wymagane dla finetunowania)
+        var utf8NoBom = new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+        File.WriteAllLines(filePath, jsonLines, utf8NoBom);
+    }
+
+    /// <summary>
+    /// Generuje prompt dla finetunowania na podstawie DatasetEntry
+    /// </summary>
+    private string GenerateFinetunePrompt(DatasetEntry entry)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("Ułóż polską krzyżówkę jako CrossGrid.");
+        sb.AppendLine($"Rozmiar: {entry.GridSize}");
+        
+        // Wyciągnij hasło główne z Description lub EmbeddingText
+        string? highlightedWord = ExtractHighlightedWord(entry);
+        if (!string.IsNullOrWhiteSpace(highlightedWord))
+        {
+            sb.AppendLine($"Hasło główne: {highlightedWord}");
+        }
+        
+        // Wyciągnij słowa z kierunkami z EmbeddingText
+        var wordsWithDirections = ExtractWordsWithDirections(entry);
+        if (wordsWithDirections.Any())
+        {
+            sb.AppendLine("Słowa (kierunki w nawiasach):");
+            foreach (var (word, direction) in wordsWithDirections)
+            {
+                sb.AppendLine($"- {word} ({direction})");
+            }
+        }
+        
+        sb.AppendLine("Zwróć tylko sekcję # GRID.");
+        
+        return sb.ToString().TrimEnd(); // Usuń końcowy znak nowej linii
+    }
+
+    /// <summary>
+    /// Wyciąga hasło główne z DatasetEntry
+    /// </summary>
+    private string? ExtractHighlightedWord(DatasetEntry entry)
+    {
+        // Szukaj w Description: "Hasło główne: WORD"
+        var match = System.Text.RegularExpressions.Regex.Match(entry.Description, @"Hasło główne:\s*([A-ZĄĆĘŁŃÓŚŹŻ]+)");
+        if (match.Success)
+        {
+            return match.Groups[1].Value;
+        }
+        
+        // Szukaj w EmbeddingText: "Hasło główne: WORD"
+        if (entry.RagMetadata != null)
+        {
+            match = System.Text.RegularExpressions.Regex.Match(entry.RagMetadata.EmbeddingText, @"Hasło główne:\s*([A-ZĄĆĘŁŃÓŚŹŻ]+)");
+            if (match.Success)
+            {
+                return match.Groups[1].Value;
+            }
+        }
+        
+        return null;
+    }
+
+    /// <summary>
+    /// Wyciąga słowa z kierunkami z DatasetEntry
+    /// </summary>
+    private List<(string word, string direction)> ExtractWordsWithDirections(DatasetEntry entry)
+    {
+        var words = new List<(string, string)>();
+        
+        // Szukaj w EmbeddingText: "WORD (Direction)"
+        if (entry.RagMetadata != null)
+        {
+            var matches = System.Text.RegularExpressions.Regex.Matches(
+                entry.RagMetadata.EmbeddingText, 
+                @"([A-ZĄĆĘŁŃÓŚŹŻ]+)\s*\((\w+)\)");
+            
+            foreach (System.Text.RegularExpressions.Match match in matches)
+            {
+                string word = match.Groups[1].Value;
+                string direction = match.Groups[2].Value;
+                
+                // Konwertuj kierunek na polski format
+                if (direction.Equals("Across", StringComparison.OrdinalIgnoreCase))
+                    direction = "Across";
+                else if (direction.Equals("Down", StringComparison.OrdinalIgnoreCase))
+                    direction = "Down";
+                
+                words.Add((word, direction));
+            }
+        }
+        
+        return words;
+    }
+
 
     private string GenerateDescription(CrosswordGrid grid, bool hasWalls, int wallCount)
     {
@@ -946,6 +1154,12 @@ public class DatasetEntry
     /// Pusta wersja XAML (bez liter, tylko ramki i definicje) - do wypełnienia ręcznie
     /// </summary>
     public string? EmptyXaml { get; set; }
+    
+    /// <summary>
+    /// Format CrossGrid - prosty tekstowy format ASCII art dla LLM
+    /// Format: # GRID\nR0: ....[1]P..H.......R..\nR1: ....[2]O..I.P.....O..\n...
+    /// </summary>
+    public string? CrossGrid { get; set; }
     
     public string Description { get; set; } = string.Empty;
     public DatasetMetadata Metadata { get; set; } = new();

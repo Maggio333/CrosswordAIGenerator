@@ -22,8 +22,11 @@ public static class DependencyInjection
         services.AddTransient<MainWindowViewModel>();
         services.AddTransient<CustomWordsViewModel>();
         services.AddTransient<DatasetGeneratorViewModel>();
+        services.AddSingleton<SettingsViewModel>(); // Singleton - ustawienia są współdzielone
+        services.AddTransient<CrosswordAIGenerator.WPF.Presentation.ViewModels.CrossGridPreviewViewModel>();
         services.AddTransient<MainWindow>();
         services.AddTransient<DatasetGeneratorWindow>();
+        services.AddTransient<CrosswordAIGenerator.WPF.Presentation.Views.CrossGridPreviewWindow>();
 
         return services;
     }

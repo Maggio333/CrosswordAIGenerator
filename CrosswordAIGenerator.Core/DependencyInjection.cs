@@ -32,6 +32,13 @@ public static class DependencyInjection
             return new XamlGenerator(logger);
         });
 
+        // CrossGridGenerator - generator formatu CrossGrid (ASCII art)
+        services.AddSingleton<ICrossGridGenerator>(serviceProvider =>
+        {
+            var logger = serviceProvider.GetService<ICursorLogger>();
+            return new CrossGridGenerator(logger);
+        });
+
         // HighlightedWordGenerator - generator haseł z cache'owaniem
         services.AddSingleton<IHighlightedWordGenerator>(serviceProvider =>
         {
@@ -65,11 +72,12 @@ public static class DependencyInjection
         {
             var gridGenerator = serviceProvider.GetRequiredService<IEmptyGridGenerator>();
             var xamlGenerator = serviceProvider.GetRequiredService<IXamlGenerator>();
+            var crossGridGenerator = serviceProvider.GetService<ICrossGridGenerator>();
             var wordDictionary = serviceProvider.GetRequiredService<IWordDictionary>();
             var wordGenerator = serviceProvider.GetService<IHighlightedWordGenerator>();
             var logger = serviceProvider.GetService<ICursorLogger>();
             var wordPlacer = new Domain.Services.CrosswordWordPlacer(wordDictionary, seed: null, logger);
-            return new DatasetGenerator(gridGenerator, xamlGenerator, wordDictionary, wordPlacer, wordGenerator, logger);
+            return new DatasetGenerator(gridGenerator, xamlGenerator, wordDictionary, wordPlacer, wordGenerator, logger, crossGridGenerator);
         });
 
         return services;

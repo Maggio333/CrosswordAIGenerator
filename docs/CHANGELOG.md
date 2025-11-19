@@ -14,6 +14,72 @@ a projekt używa [Semantic Versioning](https://semver.org/lang/pl/).
 - Eksport do Qdrant (integracja z ChatElioraSystem)
 - LoRA Dataset Exporter
 
+## [1.2.0] - 2025-11-19
+
+### ✨ Dodano
+
+#### Nowe funkcjonalności
+- **CrossGrid Format** - prosty format ASCII art dla LLM (alternatywa dla XAML)
+  - Format: `# GRID\nR0: ....[1]P..H.......R..\nR1: ....[2]O..I.P.....O..\n...`
+  - Wizualne separatory co 5 kolumn dla lepszej czytelności
+  - Wsparcie dla highlighted cells z numerowanymi indeksami `[1]`, `[2]`, etc.
+- **Okno podglądu CrossGrid** - narzędzie do testowania i walidacji formatu CrossGrid
+  - Menu "Narzędzia" → "Podgląd CrossGrid"
+  - Wklejanie CrossGrid (obsługa escape sequences `\r\n` i rzeczywistych znaków nowej linii)
+  - Konwersja CrossGrid → XAML z podglądem wizualnym
+  - Automatyczna walidacja przed konwersją
+- **Walidacja CrossGrid** - automatyczna walidacja formatu
+  - Sprawdzanie poprawności parsowania
+  - Weryfikacja spójności (highlighted cells mają litery)
+  - Sprawdzanie ciągłości indeksów (1, 2, 3...)
+  - Porównanie z oryginalnym gridem (opcjonalnie)
+- **Eksport do JSONL (Finetune)** - format gotowy do finetunowania
+  - Format JSONL (JSON Lines) - jeden JSON na linię
+  - Pola: `prompt` (instrukcja) i `response` (CrossGrid)
+  - UTF-8 bez BOM (dla polskich znaków)
+  - Kompatybilny z: TRL SFTTrainer, Axolotl, LLaMA-Factory
+  - Prompt kończy się `\n` (model uczy się, że po tym zaczyna się odpowiedź)
+- **Ustawienia datasetów** - kontrola które elementy są zawarte w eksportowanych datasetach
+  - Zakładka "Ustawienia" w MainWindow
+  - Checkboxy dla: XAML, EmptyXaml, CrossGrid, Screenshot, Description, SearchableText, EmbeddingText
+  - Automatyczne zapisywanie ustawień do JSON
+  - Ustawienia kontrolują tylko eksport (generowanie zawsze tworzy wszystkie elementy)
+
+#### UI/UX
+- **Menu "Narzędzia"** - dostęp do narzędzi pomocniczych
+- **Zakładka "Ustawienia"** - konfiguracja eksportu datasetów
+- **Przycisk "Eksport JSONL (Finetune)"** - eksport w formacie gotowym do finetunowania
+
+### 🔧 Zmieniono
+
+#### Dataset Generator
+- **Generowanie zawsze tworzy wszystkie elementy** - Settings kontrolują tylko eksport, nie generowanie
+- **Eksport JSON** - filtruje pola zgodnie z ustawieniami przed serializacją
+- **Eksport JSONL** - nowy format eksportu gotowy do finetunowania
+- **CrossGrid w DatasetEntry** - dodano pole `CrossGrid` do `DatasetEntry`
+
+#### CrossGrid Generator
+- **Wizualne separatory** - spacje co 5 kolumn dla lepszej czytelności w JSON
+- **Parser ignoruje separatory** - spacje są usuwane przed parsowaniem
+- **Mapper XAML ↔ CrossGrid** - dwukierunkowa konwersja dla walidacji
+
+#### XAML Generator
+- **Style w Grid.Resources** - domyślne style dla TextBlock i Border (FontFamily, FontSize, BorderBrush, BorderThickness)
+- **Uproszczone BorderThickness** - jednolity `BorderThickness="1"` wszędzie (bez różnicowania początku/końca słowa)
+
+### 🐛 Naprawiono
+
+- **Settings nie były stosowane** - naprawiono synchronizację Settings między ViewModels przez DI
+- **Powtarzające się Grid.Resources** - konsolidacja do jednego bloku w root Grid
+- **Powtarzające się BorderBrush/BorderThickness** - użycie domyślnych stylów
+
+### 📝 Dokumentacja
+
+- Zaktualizowano README.md o nowe funkcjonalności
+- Dodano sekcję o CrossGrid Format
+- Dodano sekcję o eksporcie do finetunowania
+- Zaktualizowano CHANGELOG.md
+
 ## [1.1.0] - 2025-11-19
 
 ### ✨ Dodano

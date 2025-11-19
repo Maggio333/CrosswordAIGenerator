@@ -37,6 +37,8 @@ Projekt wykorzystuje **Clean Architecture** z wyraźnym podziałem na warstwy i 
 - `WordDictionary` - implementacja `IWordDictionary` (wczytuje cały słownik do pamięci)
 - `LazyWordDictionary` - optymalizowana implementacja `IWordDictionary` (leniwe ładowanie)
 - `XamlGenerator` - generowanie XAML z `CrosswordGrid`
+- `CrossGridGenerator` - generowanie i parsowanie formatu CrossGrid (ASCII art)
+- `CrossGridValidationResult` - wynik walidacji formatu CrossGrid
 - `CursorLogger` - implementacja `ICursorLogger`
 
 **Zasada:** Infrastructure implementuje interfejsy z Domain
@@ -232,14 +234,16 @@ public class CrosswordWord
 public class DatasetEntry
 {
     public string Id { get; set; }
-    public string Type { get; set; }  // "empty_grid" | "crossword_with_words"
+    public string Type { get; set; }  // "empty_grid" | "crossword_with_words" | "custom_words"
     public string GridSize { get; set; }
     public bool HasWalls { get; set; }
     public string Xaml { get; set; }
+    public string? EmptyXaml { get; set; }  // Pusta wersja (bez liter, tylko ramki i definicje)
+    public string? CrossGrid { get; set; }  // Format ASCII art dla LLM
     public string Description { get; set; }
     public string SearchableText { get; set; }
     public DatasetMetadata Metadata { get; set; }
-    public RagMetadata RagMetadata { get; set; }
+    public RagMetadata? RagMetadata { get; set; }
 }
 ```
 

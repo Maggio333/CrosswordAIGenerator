@@ -26,12 +26,17 @@ Stworzenie nieograniczonego datasetu krzyżówek poprzez:
 - **Własne słowa i definicje** - zakładka do generowania krzyżówek z własnymi słowami i definicjami
 - **Puste wersje krzyżówek** - automatyczne generowanie pustych wersji (bez liter, tylko ramki i definicje) do wypełnienia ręcznie
 - **XAML Generator** - minimalny, zoptymalizowany XAML dla LLM (Style w Grid.Resources, brak powtórzeń)
+- **CrossGrid Format** - prosty format ASCII art dla LLM (z separators co 5 kolumn dla czytelności)
+- **CrossGrid Preview** - okno do podglądu i walidacji CrossGrid (konwersja CrossGrid → XAML)
+- **Walidacja CrossGrid** - automatyczna walidacja formatu przed eksportem
 - **ScrollViewer** - przewijanie dla dużych krzyżówek
 - **Ramki wokół słów** - czarne ramki wokół słów z numeracją
 - **Obszar z definicjami** - wyświetlanie definicji słów po prawej stronie krzyżówki
 - **Screenshot Service** - zapisywanie krzyżówek jako obrazy JPG (pełne i puste wersje)
 - **Dataset Generator** - masowe generowanie przykładów z real-time progress
 - **Eksport do JPG** - jednoczesny eksport pełnych i pustych screenshotów
+- **Eksport do JSONL** - format gotowy do finetunowania (prompt/response, UTF-8 bez BOM)
+- **Ustawienia datasetów** - kontrola które elementy są zawarte w eksportowanych datasetach
 - **Wsparcie dla polskich znaków** - pełna obsługa diakrytyków (Ą, Ć, Ę, Ł, Ń, Ó, Ś, Ź, Ż)
 - **Lazy Word Dictionary** - optymalizacja pamięci dla dużych słowników (3M+ słów, leniwe ładowanie)
 - **Highlighted Word Generator** - cache dla szybkiego generowania haseł
@@ -153,7 +158,9 @@ dotnet run
 2. Wprowadź liczbę przykładów (np. 100)
 3. Kliknij "Generuj Dataset"
 4. Postęp jest wyświetlany w statusie
-5. Po zakończeniu możesz eksportować do JSON
+5. Po zakończeniu możesz eksportować:
+   - **Eksport JSON** - pełny dataset z wszystkimi polami (XAML, CrossGrid, Description, etc.)
+   - **Eksport JSONL (Finetune)** - format gotowy do finetunowania (prompt/response, UTF-8 bez BOM)
 
 ### Zapisywanie screenshotów
 
@@ -171,6 +178,51 @@ dotnet run
 4. Opcjonalnie: ustaw **Min. liczba słów** (jeśli chcesz użyć mniej słów niż liter w haśle)
 5. Kliknij **"Generuj Pojedynczy"** lub **"Generuj Dataset"**
 6. Wygenerowane krzyżówki będą widoczne również w zakładce "Automatyczne"
+
+### Podgląd i walidacja CrossGrid
+
+1. Otwórz menu **"Narzędzia"** → **"Podgląd CrossGrid"**
+2. Wklej kod CrossGrid (może być z escape sequences `\r\n` lub rzeczywiste znaki nowej linii)
+3. Kliknij **"Konwertuj do XAML"**
+4. Zobacz:
+   - Wygenerowany XAML
+   - Wizualny podgląd krzyżówki
+   - Wyniki walidacji (błędy/ostrzeżenia)
+
+### Ustawienia datasetów
+
+1. Przejdź do zakładki **"Ustawienia"**
+2. Zaznacz/odznacz elementy, które mają być zawarte w eksportowanych datasetach:
+   - **Zawieraj XAML** - pełna wersja z literami
+   - **Zawieraj pustą wersję XAML** - bez liter, tylko ramki i definicje
+   - **Zawieraj CrossGrid** - format ASCII art
+   - **Zawieraj screenshot** - obraz JPG
+   - **Zawieraj opis tekstowy** - Description
+   - **Zawieraj SearchableText** - tekst do wyszukiwania
+   - **Zawieraj EmbeddingText** - tekst do embeddingu dla RAG
+3. Ustawienia są automatycznie zapisywane
+
+### Eksport do finetunowania
+
+1. Wygeneruj dataset z krzyżówkami (zaznacz "Ze słowami")
+2. Upewnij się, że **"Zawieraj CrossGrid"** jest zaznaczone w ustawieniach
+3. Kliknij **"Eksport JSONL (Finetune)"**
+4. Wybierz lokalizację pliku (domyślnie `.jsonl`)
+5. Plik będzie w formacie JSONL gotowym do użycia z:
+   - **TRL SFTTrainer** (`input_column="prompt"`, `output_column="response"`)
+   - **Axolotl** / **LLaMA-Factory** (format prompt/response)
+   - Inne narzędzia SFT
+
+**Format wyjściowy:**
+```jsonl
+{"prompt":"Ułóż polską krzyżówkę jako CrossGrid.\nRozmiar: 16x16\nHasło główne: KONDZE\nSłowa (kierunki w nawiasach):\n- NIEPOKRĘCONĄ (Across)\n...\nZwróć tylko sekcję # GRID.\n","response":"# GRID\nR0: ..... ..... ..... .\nR1: ..... .E.C. ..... .\n..."}
+```
+
+**Wymagania formatu:**
+- UTF-8 bez BOM (dla polskich znaków)
+- Jeden JSON na linię (bez przecinków między liniami)
+- Prompt kończy się `\n` (model uczy się, że po tym zaczyna się odpowiedź)
+- Response zawsze zaczyna się od `# GRID\n`
 
 ## 🔧 Konfiguracja
 

@@ -227,7 +227,7 @@ Podczas generowania zobaczysz:
 ### Eksport do JSON
 
 1. Wygeneruj dataset
-2. Kliknij "Eksportuj do JSON"
+2. Kliknij **"Eksport JSON"**
 3. Wybierz lokalizację pliku
 4. Zapisuje wszystkie przykłady w formacie JSON
 
@@ -239,6 +239,7 @@ Podczas generowania zobaczysz:
     "Type": "crossword_with_words",
     "GridSize": "15x15",
     "Xaml": "<Grid>...</Grid>",
+    "CrossGrid": "# GRID\nR0: ....[1]P..H.......R..\n...",
     "Description": "Krzyżówka z hasłem głównym KOT...",
     "Metadata": { ... },
     "RagMetadata": { ... }
@@ -246,6 +247,67 @@ Podczas generowania zobaczysz:
   ...
 ]
 ```
+
+**Uwaga:** Pola w eksportowanym JSON są filtrowane zgodnie z ustawieniami (zakładka "Ustawienia"). Jeśli odznaczysz "Zawieraj XAML", pole `Xaml` będzie puste.
+
+### Eksport do JSONL (Finetune)
+
+Format gotowy do finetunowania modeli językowych (Bielik 4B, etc.).
+
+1. Wygeneruj dataset z krzyżówkami (zaznacz "Ze słowami")
+2. Upewnij się, że **"Zawieraj CrossGrid"** jest zaznaczone w ustawieniach
+3. Kliknij **"Eksport JSONL (Finetune)"**
+4. Wybierz lokalizację pliku (domyślnie `.jsonl`)
+5. Plik będzie gotowy do użycia z:
+   - **TRL SFTTrainer** (`input_column="prompt"`, `output_column="response"`)
+   - **Axolotl** / **LLaMA-Factory** (format prompt/response)
+   - Inne narzędzia SFT
+
+**Format JSONL:**
+```jsonl
+{"prompt":"Ułóż polską krzyżówkę jako CrossGrid.\nRozmiar: 16x16\nHasło główne: KONDZE\nSłowa (kierunki w nawiasach):\n- NIEPOKRĘCONĄ (Across)\n- KOSZALIŃSKIEGO (Down)\n...\nZwróć tylko sekcję # GRID.\n","response":"# GRID\nR0: ..... ..... ..... .\nR1: ..... .E.C. ..... .\n..."}
+{"prompt":"...","response":"..."}
+```
+
+**Wymagania formatu:**
+- UTF-8 bez BOM (dla polskich znaków)
+- Jeden JSON na linię (bez przecinków między liniami, bez nawiasów `[]`)
+- Prompt kończy się `\n` (model uczy się, że po tym zaczyna się odpowiedź)
+- Response zawsze zaczyna się od `# GRID\n`
+- Spójny format CrossGrid (R0, R1, ... z [1], [2] dla highlighted cells)
+
+### Ustawienia eksportu
+
+1. Przejdź do zakładki **"Ustawienia"**
+2. Zaznacz/odznacz elementy, które mają być zawarte w eksportowanych datasetach:
+   - **Zawieraj XAML** - pełna wersja z literami
+   - **Zawieraj pustą wersję XAML** - bez liter, tylko ramki i definicje
+   - **Zawieraj CrossGrid** - format ASCII art
+   - **Zawieraj screenshot** - obraz JPG
+   - **Zawieraj opis tekstowy** - Description
+   - **Zawieraj SearchableText** - tekst do wyszukiwania
+   - **Zawieraj EmbeddingText** - tekst do embeddingu dla RAG
+3. Ustawienia są automatycznie zapisywane do `dataset_settings.json`
+
+**Uwaga:** Ustawienia kontrolują tylko **eksport** - generowanie zawsze tworzy wszystkie elementy. To pozwala na różne eksporty z tego samego datasetu.
+
+### Podgląd i walidacja CrossGrid
+
+1. Otwórz menu **"Narzędzia"** → **"Podgląd CrossGrid"**
+2. Wklej kod CrossGrid do pola tekstowego:
+   - Może być z escape sequences: `# GRID\r\nR0: ..... O.... J....\r\n...`
+   - Lub z rzeczywistymi znakami nowej linii (z edytora tekstu)
+3. Kliknij **"Konwertuj do XAML"**
+4. Zobacz:
+   - **Wygenerowany XAML** - w lewym panelu
+   - **Wizualny podgląd krzyżówki** - w prawym panelu
+   - **Wyniki walidacji** - błędy/ostrzeżenia w dolnej części okna
+
+**Funkcje:**
+- Automatyczna walidacja przed konwersją
+- Normalizacja tekstu (escape sequences → rzeczywiste znaki nowej linii)
+- Konwersja CrossGrid → XAML z użyciem mappera
+- Podgląd wizualny w CrosswordView
 
 ### Zapisywanie screenshotów
 
@@ -355,10 +417,13 @@ A: System znajduje wszystkie litery hasła głównego w krzyżówce i:
 
 ### Q: Czy mogę eksportować do innych formatów?
 
-A: Obecnie tylko JSON. W przyszłości planowane:
+A: Obecnie dostępne:
+- **Eksport do JSON** - pełny dataset z wszystkimi polami
+- **Eksport do JSONL (Finetune)** - format gotowy do finetunowania (prompt/response)
+
+W przyszłości planowane:
 - Eksport do Qdrant (wektory)
 - Eksport do formatu LoRA (finetuning)
-- Eksport do CSV
 
 ### Q: Jak długo trwa generowanie 100 przykładów?
 

@@ -26,6 +26,12 @@ public partial class MainWindowViewModel : BaseViewModel
     private readonly IEmptyGridGenerator _gridGenerator;
     private readonly IXamlGenerator _xamlGenerator;
     private readonly IScreenshotService _screenshotService;
+    private readonly SettingsViewModel _settingsViewModel;
+
+    /// <summary>
+    /// Ustawienia datasetów (pobierane z SettingsViewModel)
+    /// </summary>
+    public DatasetSettings Settings => _settingsViewModel.Settings;
 
     // Properties dla binding
     [ObservableProperty]
@@ -135,12 +141,14 @@ public partial class MainWindowViewModel : BaseViewModel
         IEmptyGridGenerator gridGenerator,
         IXamlGenerator xamlGenerator,
         IScreenshotService screenshotService,
-        DatasetGenerator datasetGenerator)
+        DatasetGenerator datasetGenerator,
+        SettingsViewModel settingsViewModel)
     {
         _gridGenerator = gridGenerator ?? throw new ArgumentNullException(nameof(gridGenerator));
         _xamlGenerator = xamlGenerator ?? throw new ArgumentNullException(nameof(xamlGenerator));
         _screenshotService = screenshotService ?? throw new ArgumentNullException(nameof(screenshotService));
         _datasetGenerator = datasetGenerator ?? throw new ArgumentNullException(nameof(datasetGenerator));
+        _settingsViewModel = settingsViewModel ?? throw new ArgumentNullException(nameof(settingsViewModel));
         
         StatusMessage = "Gotowy";
         
@@ -549,9 +557,51 @@ public partial class MainWindowViewModel : BaseViewModel
 
             if (saveDialog.ShowDialog() == true)
             {
-                _datasetGenerator.SaveDatasetToFile(DatasetEntries.ToList(), saveDialog.FileName);
+                _datasetGenerator.SaveDatasetToFile(DatasetEntries.ToList(), saveDialog.FileName, Settings);
                 StatusMessage = $"Zapisano do {saveDialog.FileName}";
                 MessageBox.Show($"Zapisano {DatasetEntries.Count} przykładów do pliku.", "Sukces", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Błąd eksportu: {ex.Message}";
+            MessageBox.Show($"Błąd podczas eksportu: {ex.Message}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>
+    /// Eksportuje dataset do CSV w formacie gotowym do finetunowania
+    /// </summary>
+    [RelayCommand]
+    private void ExportToFinetuneCsv()
+    {
+        if (DatasetEntries.Count == 0)
+        {
+            MessageBox.Show("Brak danych do eksportu. Najpierw wygeneruj dataset.", "Brak danych", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        // Sprawdź czy są wpisy z CrossGrid
+        var entriesWithCrossGrid = DatasetEntries.Where(e => !string.IsNullOrWhiteSpace(e.CrossGrid) && e.Type != "empty_grid").ToList();
+        if (entriesWithCrossGrid.Count == 0)
+        {
+            MessageBox.Show("Brak wpisów z CrossGrid do eksportu. Upewnij się, że 'Zawieraj CrossGrid' jest zaznaczone w ustawieniach.", "Brak danych", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        try
+        {
+            var saveDialog = new SaveFileDialog
+            {
+                Filter = "JSONL files (*.jsonl)|*.jsonl|JSON files (*.json)|*.json|All files (*.*)|*.*",
+                FileName = $"crossword_finetune_{DateTime.Now:yyyyMMdd_HHmmss}.jsonl"
+            };
+
+            if (saveDialog.ShowDialog() == true)
+            {
+                _datasetGenerator.ExportToFinetuneCsv(entriesWithCrossGrid, saveDialog.FileName);
+                StatusMessage = $"Zapisano do {saveDialog.FileName}";
+                MessageBox.Show($"Zapisano {entriesWithCrossGrid.Count} przykładów do pliku JSONL (gotowe do finetunowania).", "Sukces", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
         catch (Exception ex)

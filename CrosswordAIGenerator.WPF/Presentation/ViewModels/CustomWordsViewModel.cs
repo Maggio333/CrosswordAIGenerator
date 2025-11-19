@@ -28,6 +28,7 @@ public partial class CustomWordsViewModel : BaseViewModel
     private readonly ICursorLogger? _logger;
     private CrosswordView? _crosswordView;
     private MainWindowViewModel? _mainWindowViewModel;
+    private readonly SettingsViewModel _settingsViewModel;
 
     [ObservableProperty]
     private string _highlightedWord = string.Empty;
@@ -103,12 +104,14 @@ public partial class CustomWordsViewModel : BaseViewModel
         IXamlGenerator xamlGenerator,
         IScreenshotService screenshotService,
         DatasetGenerator datasetGenerator,
+        SettingsViewModel settingsViewModel,
         ICursorLogger? logger = null)
     {
         _gridGenerator = gridGenerator ?? throw new ArgumentNullException(nameof(gridGenerator));
         _xamlGenerator = xamlGenerator ?? throw new ArgumentNullException(nameof(xamlGenerator));
         _screenshotService = screenshotService ?? throw new ArgumentNullException(nameof(screenshotService));
         _datasetGenerator = datasetGenerator ?? throw new ArgumentNullException(nameof(datasetGenerator));
+        _settingsViewModel = settingsViewModel ?? throw new ArgumentNullException(nameof(settingsViewModel));
         _logger = logger;
 
         _logger?.Info("CustomWordsViewModel: Konstruktor wywołany");
@@ -385,7 +388,7 @@ public partial class CustomWordsViewModel : BaseViewModel
                                 wordList,
                                 minWordsCount: actualWordsCount,
                                 wordDefinitions: wordDefinitions,
-                        onProgress: (current, total) =>
+                                onProgress: (current, total) =>
                         {
                             try
                             {
@@ -527,7 +530,7 @@ public partial class CustomWordsViewModel : BaseViewModel
 
             if (saveDialog.ShowDialog() == true)
             {
-                _datasetGenerator.SaveDatasetToFile(DatasetEntries.ToList(), saveDialog.FileName);
+                _datasetGenerator.SaveDatasetToFile(DatasetEntries.ToList(), saveDialog.FileName, _settingsViewModel.Settings);
                 StatusMessage = $"Zapisano do {saveDialog.FileName}";
                 MessageBox.Show($"Zapisano {DatasetEntries.Count} przykładów do pliku.", "Sukces", MessageBoxButton.OK, MessageBoxImage.Information);
             }
