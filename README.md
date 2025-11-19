@@ -356,18 +356,23 @@ Wszystkie dokumenty znajdują się w katalogu [`docs/`](docs/):
 - [x] Railway Oriented Programming (Result pattern)
 - [x] Logging (CursorLogger z szczegółowymi logami)
 - [x] Real-time progress (aktualizacja licznika podczas generowania)
+- [x] Własne słowa i definicje (zakładka "Własne słowa")
+- [x] Puste wersje krzyżówek (bez liter, tylko ramki i definicje)
+- [x] CrossGrid Format (prosty format ASCII art dla LLM)
+- [x] CrossGrid Preview (okno podglądu i walidacji)
+- [x] Ustawienia datasetów (kontrola eksportu)
 
-### MVP 2 🚧 (Planowane)
-- [ ] DSL Format (pośredni format dla LLM)
-- [ ] DSL Parser (DSL → XAML)
-- [ ] DSL Generator (XAML → DSL)
-- [ ] Integracja z LLM (generowanie XAML przez model)
+### MVP 2 🚧 (W trakcie)
+- [x] CrossGrid Format (pośredni format dla LLM) ✅
+- [x] CrossGrid Parser (CrossGrid → XAML) ✅
+- [x] CrossGrid Generator (XAML → CrossGrid) ✅
+- [x] LoRA Dataset Exporter (JSONL format) ✅
+- [ ] Integracja z LLM (generowanie CrossGrid przez model)
 
 ### MVP 3 🚧 (Planowane)
 - [ ] Eksport do Qdrant (integracja z ChatElioraSystem)
 - [ ] RAG testing
-- [ ] LoRA Dataset Exporter
-- [ ] Finetuning workflow
+- [ ] Finetuning workflow (automatyzacja)
 
 ## 📄 Licencja
 
@@ -386,5 +391,5 @@ W razie pytań lub problemów, utwórz issue w repozytorium.
 
 ---
 
-**Status:** 🟢 MVP 1 - Gotowe do użycia | 🚧 MVP 2 - W planach
+**Status:** 🟢 MVP 1 - Zakończone | 🟡 MVP 2 - W trakcie (CrossGrid, JSONL) | 🚧 MVP 3 - W planach
 
