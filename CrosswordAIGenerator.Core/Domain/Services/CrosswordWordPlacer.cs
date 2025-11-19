@@ -188,16 +188,23 @@ public class CrosswordWordPlacer
                 // Priorytetyzuj słowa które zawierają więcej liter z hasła, ale z większą losowością
                 // Licz ile liter z hasła zawiera każde słowo
                 // WAŻNE: Każde słowo MUSI zawierać przynajmniej jedną literę z hasła
+                // Dodatkowo: unikaj słów zaczynających się od tego samego prefiksu (np. "nie...", "prze...")
+                var commonPrefixes = new[] { "NIE", "PRZE", "WY", "ZA", "OD", "NA", "PO", "DO", "RO", "PRZED", "POD", "NAD", "OB", "PRZY", "BEZ", "PRZEZ", "PRZECIW", "POMIĘDZY", "PONAD", "OBOK" };
+                var usedPrefixes = usedWords.Select(w => commonPrefixes.FirstOrDefault(p => w.StartsWith(p))).Where(p => p != null).ToHashSet();
+                
                 var scoredCandidates = allCandidates.Select(word => new
                 {
                     Word = word,
                     Score = word.Count(c => highlightedWordLetters.Contains(c)), // Ile liter z hasła
+                    HasCommonPrefix = commonPrefixes.Any(p => word.StartsWith(p)),
+                    UsesAlreadyUsedPrefix = commonPrefixes.Any(p => word.StartsWith(p) && usedPrefixes.Contains(p)), // Czy używa już użytego prefiksu
                     ContainsRequiredLetter = word.Contains(requiredLetter), // Zawiera wymaganą literę dla tej pozycji
                     ContainsAnyHighlightedLetter = word.Any(c => highlightedWordLetters.Contains(c)), // Zawiera przynajmniej jedną literę z hasła
                     RandomWeight = _random.NextDouble() // Dodaj losową wagę dla większej różnorodności
                 })
                 .Where(x => x.ContainsRequiredLetter && x.ContainsAnyHighlightedLetter) // MUSI zawierać wymaganą literę I przynajmniej jedną literę z hasła
                 .OrderByDescending(x => x.Score) // Najpierw słowa z większą liczbą liter z hasła
+                .ThenBy(x => x.UsesAlreadyUsedPrefix ? 1 : 0) // Preferuj słowa z nowymi prefiksami
                 .ThenByDescending(x => x.RandomWeight) // Potem losowo (używamy RandomWeight zamiast ThenBy z Next())
                 .ToList();
                 

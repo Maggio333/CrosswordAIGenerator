@@ -207,7 +207,9 @@ public class WordDictionary : IWordDictionary
         if (candidates.Count == 0)
             return null;
         
-        return candidates[_random.Next(candidates.Count)];
+        // Użyj shuffle dla lepszej losowości
+        var shuffled = ShuffleList(candidates);
+        return shuffled[0];
     }
 
     /// <summary>
@@ -230,7 +232,9 @@ public class WordDictionary : IWordDictionary
             return null;
         }
         
-        return candidates[_random.Next(candidates.Count)];
+        // Użyj shuffle dla lepszej losowości
+        var shuffled = ShuffleList(candidates);
+        return shuffled[0];
     }
 
     /// <summary>
@@ -244,11 +248,13 @@ public class WordDictionary : IWordDictionary
             return new List<string>();
         }
         
-        return _wordsByLetter[letter]
+        var candidates = _wordsByLetter[letter]
             .Where(w => w.Length >= minLength && w.Length <= maxLength)
-            .OrderBy(x => _random.Next()) // Wymieszaj dla lepszej losowości
-            .Take(maxResults)
             .ToList();
+        
+        // Użyj Fisher-Yates shuffle dla lepszej losowości
+        var shuffled = ShuffleList(candidates);
+        return shuffled.Take(maxResults).ToList();
     }
 
     /// <summary>
@@ -263,7 +269,9 @@ public class WordDictionary : IWordDictionary
         if (candidates.Count == 0)
             return null;
 
-        return candidates[_random.Next(candidates.Count)];
+        // Użyj shuffle dla lepszej losowości
+        var shuffled = ShuffleList(candidates);
+        return shuffled[0];
     }
 
     // Dodatkowe metody (nie w interfejsie, ale używane w kodzie)
@@ -295,5 +303,19 @@ public class WordDictionary : IWordDictionary
     /// Zwraca liczbę słów w słowniku
     /// </summary>
     public int Count => _words.Count;
+
+    /// <summary>
+    /// Fisher-Yates shuffle - efektywny algorytm losowego mieszania listy
+    /// </summary>
+    private List<T> ShuffleList<T>(List<T> list)
+    {
+        var shuffled = new List<T>(list);
+        for (int i = shuffled.Count - 1; i > 0; i--)
+        {
+            int j = _random.Next(i + 1);
+            (shuffled[i], shuffled[j]) = (shuffled[j], shuffled[i]);
+        }
+        return shuffled;
+    }
 }
 

@@ -537,9 +537,9 @@ public class LazyWordDictionary : IWordDictionary
         var lineNumbers = _letterLineNumbers[letter];
         int maxAttempts = Math.Min(50, lineNumbers.Count); // Zmniejszona liczba prób
         
-        // Wczytaj próbkę linii na raz (batch)
-        var sampleSize = Math.Min(50, lineNumbers.Count);
-        var sampleLineNumbers = lineNumbers.OrderBy(x => _random.Next()).Take(sampleSize).ToList();
+        // Wczytaj próbkę linii na raz (batch) - użyj większej próbki dla lepszej różnorodności
+        var sampleSize = Math.Min(100, lineNumbers.Count); // Zwiększona z 50 do 100
+        var sampleLineNumbers = ShuffleList(lineNumbers).Take(sampleSize).ToList();
         var wordsDict = ReadLinesBatch(sampleLineNumbers);
         
         // Znajdź pasujące słowo
@@ -555,7 +555,9 @@ public class LazyWordDictionary : IWordDictionary
 
         if (candidates.Count > 0)
         {
-            var selected = candidates[_random.Next(candidates.Count)];
+            // Użyj lepszego losowania - wymieszaj kandydatów przed wyborem
+            var shuffledCandidates = ShuffleList(candidates);
+            var selected = shuffledCandidates[0];
             
             // DEBUG: Sprawdź czy wybrane słowo ma polskie znaki
             if (selected.Any(c => "ĄĆĘŁŃÓŚŹŻ".Contains(c)))
@@ -624,13 +626,13 @@ public class LazyWordDictionary : IWordDictionary
             {
                 var cached = _preloadedWords[letter]
                     .Where(w => w.Length >= minLength && w.Length <= maxLength)
-                    .OrderBy(x => _random.Next())
-                    .Take(maxResults)
                     .ToList();
                 
                 if (cached.Count > 0)
                 {
-                    return cached;
+                    // Użyj Fisher-Yates shuffle dla lepszej losowości
+                    var shuffled = ShuffleList(cached);
+                    return shuffled.Take(maxResults).ToList();
                 }
             }
         }
@@ -638,8 +640,8 @@ public class LazyWordDictionary : IWordDictionary
         var results = new List<string>();
         var lineNumbers = _letterLineNumbers[letter];
         
-        // Wymieszaj numery linii losowo i weź większą próbkę (2x maxResults dla lepszej różnorodności)
-        var shuffledLineNumbers = lineNumbers.OrderBy(x => _random.Next()).Take(Math.Min(maxResults * 2, lineNumbers.Count)).ToList();
+        // Wymieszaj numery linii losowo (Fisher-Yates shuffle) i weź większą próbkę (3x maxResults dla lepszej różnorodności)
+        var shuffledLineNumbers = ShuffleList(lineNumbers).Take(Math.Min(maxResults * 3, lineNumbers.Count)).ToList();
         
         // Wczytaj wszystkie linie na raz (batch loading)
         var wordsDict = ReadLinesBatch(shuffledLineNumbers);
@@ -741,7 +743,7 @@ public class LazyWordDictionary : IWordDictionary
             // Wczytaj próbkę słów dla tej litery
             var lineNumbers = _letterLineNumbers[letter];
             var sampleSize = Math.Min(wordsPerLetter * 2, lineNumbers.Count);
-            var sampleLineNumbers = lineNumbers.OrderBy(x => _random.Next()).Take(sampleSize).ToList();
+            var sampleLineNumbers = ShuffleList(lineNumbers).Take(sampleSize).ToList();
             
             // Wczytaj batch
             var wordsDict = ReadLinesBatch(sampleLineNumbers);
@@ -823,5 +825,19 @@ public class LazyWordDictionary : IWordDictionary
     /// Zwraca przybliżoną liczbę słów w słowniku
     /// </summary>
     public int Count => _totalLines;
+
+    /// <summary>
+    /// Fisher-Yates shuffle - efektywny algorytm losowego mieszania listy
+    /// </summary>
+    private List<T> ShuffleList<T>(List<T> list)
+    {
+        var shuffled = new List<T>(list);
+        for (int i = shuffled.Count - 1; i > 0; i--)
+        {
+            int j = _random.Next(i + 1);
+            (shuffled[i], shuffled[j]) = (shuffled[j], shuffled[i]);
+        }
+        return shuffled;
+    }
 }
 
