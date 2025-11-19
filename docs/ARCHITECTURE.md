@@ -49,8 +49,11 @@ Projekt wykorzystuje **Clean Architecture** z wyraźnym podziałem na warstwy i 
 
 #### Services (`Application_/Services/`)
 - `DatasetGenerator` - główny orchestrator generowania datasetów
-  - Używa `IEmptyGridGenerator`, `IXamlGenerator`, `IWordDictionary`
-  - Tworzy `DatasetEntry` z XAML, opisem, metadanymi
+  - Używa `IEmptyGridGenerator`, `IXamlGenerator`, `IWordDictionary`, `ICrossGridGenerator`
+  - Generuje `DatasetEntry` z XAML, CrossGrid, opisami, metadanymi
+  - Eksport do JSON (z filtrowaniem zgodnie z ustawieniami)
+  - Eksport do JSONL (format gotowy do finetunowania)
+- `DatasetSettings` - ustawienia kontrolujące które elementy są zawarte w eksportowanych datasetach
 - `IConfigService` / `ConfigService` - centralizacja stałych ("magic numbers")
 
 **Zasada:** Application koordynuje Domain i Infrastructure
