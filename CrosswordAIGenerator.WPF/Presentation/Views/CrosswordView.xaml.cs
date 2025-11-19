@@ -21,39 +21,91 @@ public partial class CrosswordView : UserControl
     /// </summary>
     public void LoadXaml(string xamlString)
     {
+        // Loguj do pliku przez System.Diagnostics.Debug (CursorLogger zapisuje to do pliku)
+        System.Diagnostics.Debug.WriteLine($"[CURSOR] CrosswordView.LoadXaml: Rozpoczęcie, XAML długość: {xamlString?.Length ?? 0}");
+        
         try
         {
+            if (string.IsNullOrWhiteSpace(xamlString))
+            {
+                System.Diagnostics.Debug.WriteLine("[CURSOR] CrosswordView.LoadXaml: XAML jest pusty!");
+                return;
+            }
+            
             // Parsuj XAML string do obiektu
             // Użyj MemoryStream z UTF-8 encoding dla poprawnych polskich znaków
             var xamlBytes = System.Text.Encoding.UTF8.GetBytes(xamlString);
             using (var memoryStream = new MemoryStream(xamlBytes))
             using (var xmlReader = XmlReader.Create(memoryStream))
             {
-                var grid = (System.Windows.Controls.Grid)XamlReader.Load(xmlReader);
+                System.Diagnostics.Debug.WriteLine("[CURSOR] CrosswordView.LoadXaml: Parsuję XAML...");
+                var loadedObject = XamlReader.Load(xmlReader);
+                System.Diagnostics.Debug.WriteLine($"[CURSOR] CrosswordView.LoadXaml: XAML sparsowany, Typ: {loadedObject.GetType().Name}");
                 
-                // Ustaw wymiary jeśli nie są ustawione
-                if (double.IsNaN(grid.Width) || grid.Width <= 0)
+                // Sprawdź czy to ScrollViewer (nowy format) czy Grid (stary format)
+                System.Windows.UIElement? contentToSet = null;
+                if (loadedObject is System.Windows.Controls.ScrollViewer scrollViewer)
                 {
-                    grid.Width = 500;
+                    System.Diagnostics.Debug.WriteLine("[CURSOR] CrosswordView.LoadXaml: Załadowano ScrollViewer");
+                    contentToSet = scrollViewer;
                 }
-                if (double.IsNaN(grid.Height) || grid.Height <= 0)
+                else if (loadedObject is System.Windows.Controls.Grid grid)
                 {
-                    grid.Height = 500;
+                    System.Diagnostics.Debug.WriteLine($"[CURSOR] CrosswordView.LoadXaml: Załadowano Grid, Children: {grid.Children.Count}");
+                    // Ustaw wymiary jeśli nie są ustawione
+                    if (double.IsNaN(grid.Width) || grid.Width <= 0)
+                    {
+                        grid.Width = 500;
+                    }
+                    if (double.IsNaN(grid.Height) || grid.Height <= 0)
+                    {
+                        grid.Height = 500;
+                    }
+                    contentToSet = grid;
                 }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[CURSOR] CrosswordView.LoadXaml: Nieoczekiwany typ: {loadedObject.GetType().Name}");
+                    contentToSet = loadedObject as System.Windows.UIElement;
+                }
+                
+                if (contentToSet == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("[CURSOR] CrosswordView.LoadXaml: BŁĄD - nie udało się załadować jako UIElement!");
+                    return;
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"[CURSOR] CrosswordView.LoadXaml: Content wymiary: {contentToSet.GetType().Name}");
+                System.Diagnostics.Debug.WriteLine($"[CURSOR] CrosswordView.LoadXaml: CrosswordContent = {CrosswordContent}");
                 
                 // Wyczyść poprzednią zawartość
                 CrosswordContent.Content = null;
                 
                 // Ustaw nową zawartość
-                CrosswordContent.Content = grid;
+                CrosswordContent.Content = contentToSet;
+                System.Diagnostics.Debug.WriteLine($"[CURSOR] CrosswordView.LoadXaml: Content ustawiony, CrosswordContent.Content = {CrosswordContent.Content?.GetType().Name ?? "null"}");
                 
                 // Wymuś aktualizację layoutu
                 UpdateLayout();
+                System.Diagnostics.Debug.WriteLine("[CURSOR] CrosswordView.LoadXaml: UpdateLayout wywołane");
+                
+                // Wymuś renderowanie
+                InvalidateVisual();
+                System.Diagnostics.Debug.WriteLine("[CURSOR] CrosswordView.LoadXaml: InvalidateVisual wywołane");
+                
+                // Wymuś odświeżenie wizualne
+                InvalidateArrange();
+                InvalidateMeasure();
+                System.Diagnostics.Debug.WriteLine("[CURSOR] CrosswordView.LoadXaml: InvalidateArrange i InvalidateMeasure wywołane");
             }
+            
+            System.Diagnostics.Debug.WriteLine("[CURSOR] CrosswordView.LoadXaml: Zakończono pomyślnie");
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Błąd podczas ładowania XAML: {ex.Message}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+            System.Diagnostics.Debug.WriteLine($"[CURSOR] CrosswordView.LoadXaml: BŁĄD! {ex.GetType().Name}: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[CURSOR] CrosswordView.LoadXaml: StackTrace: {ex.StackTrace}");
+            MessageBox.Show($"Błąd podczas ładowania XAML: {ex.Message}\n\n{ex.StackTrace}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
     
@@ -62,7 +114,20 @@ public partial class CrosswordView : UserControl
     /// </summary>
     public System.Windows.Controls.Grid? GetInnerGrid()
     {
+        // Jeśli Content to ScrollViewer, znajdź Grid wewnątrz
+        if (CrosswordContent.Content is System.Windows.Controls.ScrollViewer scrollViewer)
+        {
+            return scrollViewer.Content as System.Windows.Controls.Grid;
+        }
         return CrosswordContent.Content as System.Windows.Controls.Grid;
+    }
+    
+    /// <summary>
+    /// Zwraca ScrollViewer (dla screenshotowania)
+    /// </summary>
+    public System.Windows.Controls.ScrollViewer? GetScrollViewer()
+    {
+        return CrosswordContent.Content as System.Windows.Controls.ScrollViewer;
     }
 
     /// <summary>

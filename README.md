@@ -23,9 +23,15 @@ Stworzenie nieograniczonego datasetu krzyżówek poprzez:
 - **Generowanie pustych siatek** - siatki krzyżówek z opcjonalnymi ścianami
 - **Generowanie krzyżówek ze słowami** - automatyczne układanie słów z przecięciami
 - **Wyróżnianie hasła głównego** - czerwone tło z numerowanymi literami
+- **Własne słowa i definicje** - zakładka do generowania krzyżówek z własnymi słowami i definicjami
+- **Puste wersje krzyżówek** - automatyczne generowanie pustych wersji (bez liter, tylko ramki i definicje) do wypełnienia ręcznie
 - **XAML Generator** - minimalny, zoptymalizowany XAML dla LLM (Style w Grid.Resources, brak powtórzeń)
-- **Screenshot Service** - zapisywanie krzyżówek jako obrazy JPG
+- **ScrollViewer** - przewijanie dla dużych krzyżówek
+- **Ramki wokół słów** - czarne ramki wokół słów z numeracją
+- **Obszar z definicjami** - wyświetlanie definicji słów po prawej stronie krzyżówki
+- **Screenshot Service** - zapisywanie krzyżówek jako obrazy JPG (pełne i puste wersje)
 - **Dataset Generator** - masowe generowanie przykładów z real-time progress
+- **Eksport do JPG** - jednoczesny eksport pełnych i pustych screenshotów
 - **Wsparcie dla polskich znaków** - pełna obsługa diakrytyków (Ą, Ć, Ę, Ł, Ń, Ó, Ś, Ź, Ż)
 - **Lazy Word Dictionary** - optymalizacja pamięci dla dużych słowników (3M+ słów, leniwe ładowanie)
 - **Highlighted Word Generator** - cache dla szybkiego generowania haseł
@@ -151,8 +157,20 @@ dotnet run
 
 ### Zapisywanie screenshotów
 
-- **Pojedynczy screenshot:** Kliknij "Zapisz Screenshot" (zapisuje do `images/{dataset-id}.jpg`)
-- **Automatycznie:** Screenshoty są generowane podczas tworzenia datasetu
+- **Pojedynczy screenshot:** Kliknij "Zapisz JPG" (zapisuje do `images/{dataset-id}.jpg`)
+- **Eksport datasetu:** Kliknij "Zapisz JPG (pełne + puste)" - eksportuje:
+  - Pełne krzyżówki do `images/{dataset-id}.jpg`
+  - Puste wersje (bez liter) do `images_empty/{dataset-id}_empty.jpg`
+- **Automatycznie:** Puste wersje są generowane automatycznie dla każdej krzyżówki ze słowami
+
+### Generowanie z własnymi słowami
+
+1. Przejdź do zakładki **"Własne słowa"**
+2. Wprowadź **Hasło główne** (np. "DZIECKO")
+3. Dodaj słowa i ich definicje (przycisk "Dodaj słowo")
+4. Opcjonalnie: ustaw **Min. liczba słów** (jeśli chcesz użyć mniej słów niż liter w haśle)
+5. Kliknij **"Generuj Pojedynczy"** lub **"Generuj Dataset"**
+6. Wygenerowane krzyżówki będą widoczne również w zakładce "Automatyczne"
 
 ## 🔧 Konfiguracja
 

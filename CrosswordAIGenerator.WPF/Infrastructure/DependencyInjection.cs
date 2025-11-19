@@ -20,6 +20,7 @@ public static class DependencyInjection
 
         // WPF Presentation Services - ViewModele i Views
         services.AddTransient<MainWindowViewModel>();
+        services.AddTransient<CustomWordsViewModel>();
         services.AddTransient<DatasetGeneratorViewModel>();
         services.AddTransient<MainWindow>();
         services.AddTransient<DatasetGeneratorWindow>();

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -183,6 +184,22 @@ public partial class MainWindowViewModel : BaseViewModel
     public void SetCrosswordView(CrosswordView crosswordView)
     {
         _crosswordView = crosswordView;
+    }
+
+    /// <summary>
+    /// Dodaje wpisy datasetu z CustomWordsViewModel do kolekcji
+    /// </summary>
+    public void AddDatasetEntries(IEnumerable<DatasetEntry> entries)
+    {
+        if (entries == null) return;
+        
+        foreach (var entry in entries)
+        {
+            DatasetEntries.Add(entry);
+        }
+        
+        GeneratedCount = DatasetEntries.Count;
+        StatusMessage = $"Dodano {entries.Count()} wpisów z własnych słów (łącznie: {DatasetEntries.Count})";
     }
 
     /// <summary>
@@ -561,7 +578,7 @@ public partial class MainWindowViewModel : BaseViewModel
     }
 
     /// <summary>
-    /// Zapisuje screenshoty do katalogu images jako JPG
+    /// Zapisuje screenshoty do katalogu images jako JPG (zarówno pełne jak i puste wersje)
     /// </summary>
     [RelayCommand]
     private async Task SaveScreenshotsToImagesAsync()
@@ -584,13 +601,17 @@ public partial class MainWindowViewModel : BaseViewModel
             int savedCount = 0;
             int errorCount = 0;
 
+            // Utwórz również katalog dla pustych wersji
+            var imagesEmptyDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "images_empty");
+            Directory.CreateDirectory(imagesEmptyDir);
+
             await Task.Run(async () =>
             {
                 foreach (var entry in DatasetEntries)
                 {
                     try
                     {
-                        // Załaduj XAML do view
+                        // 1. Zapisz pełną wersję
                         await Application.Current.Dispatcher.InvokeAsync(() =>
                         {
                             if (_crosswordView != null)
@@ -599,10 +620,8 @@ public partial class MainWindowViewModel : BaseViewModel
                             }
                         });
 
-                        // Czekaj na render
                         await Task.Delay(200);
 
-                        // Zrób screenshot jako JPG - renderuj bezpośrednio Grid
                         if (_crosswordView != null)
                         {
                             await Application.Current.Dispatcher.InvokeAsync(() =>
@@ -613,19 +632,29 @@ public partial class MainWindowViewModel : BaseViewModel
                                     
                                     var filePath = Path.Combine(imagesDir, $"{entry.Id}.jpg");
                                     
-                                    // Spróbuj renderować bezpośrednio wewnętrzny Grid
-                                    var innerGrid = _crosswordView.GetInnerGrid();
-                                    if (innerGrid != null)
+                                    // Spróbuj renderować ScrollViewer (zawiera Grid z białym tłem)
+                                    var scrollViewer = _crosswordView.GetScrollViewer();
+                                    if (scrollViewer != null)
                                     {
-                                        innerGrid.UpdateLayout();
-                                        innerGrid.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
-                                        innerGrid.Arrange(new System.Windows.Rect(innerGrid.DesiredSize));
-                                        _screenshotService.CaptureToJpg(innerGrid, filePath);
+                                        scrollViewer.UpdateLayout();
+                                        scrollViewer.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+                                        scrollViewer.Arrange(new System.Windows.Rect(scrollViewer.DesiredSize));
+                                        _screenshotService.CaptureToJpg(scrollViewer, filePath);
                                     }
                                     else
                                     {
-                                        // Fallback - renderuj cały UserControl
-                                        _screenshotService.CaptureToJpg(_crosswordView, filePath);
+                                        var innerGrid = _crosswordView.GetInnerGrid();
+                                        if (innerGrid != null)
+                                        {
+                                            innerGrid.UpdateLayout();
+                                            innerGrid.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+                                            innerGrid.Arrange(new System.Windows.Rect(innerGrid.DesiredSize));
+                                            _screenshotService.CaptureToJpg(innerGrid, filePath);
+                                        }
+                                        else
+                                        {
+                                            _screenshotService.CaptureToJpg(_crosswordView, filePath);
+                                        }
                                     }
                                     
                                     savedCount++;
@@ -638,10 +667,68 @@ public partial class MainWindowViewModel : BaseViewModel
                             });
                         }
 
+                        // 2. Zapisz pustą wersję (jeśli istnieje i ma słowa)
+                        if (!string.IsNullOrEmpty(entry.EmptyXaml) && 
+                            (entry.Type == "custom_words" || entry.Type == "crossword_with_words"))
+                        {
+                            await Application.Current.Dispatcher.InvokeAsync(() =>
+                            {
+                                if (_crosswordView != null)
+                                {
+                                    _crosswordView.LoadXaml(entry.EmptyXaml);
+                                }
+                            });
+
+                            await Task.Delay(200);
+
+                            if (_crosswordView != null)
+                            {
+                                await Application.Current.Dispatcher.InvokeAsync(() =>
+                                {
+                                    try
+                                    {
+                                        _crosswordView.UpdateLayout();
+                                        
+                                        var emptyFilePath = Path.Combine(imagesEmptyDir, $"{entry.Id}_empty.jpg");
+                                        
+                                        // Spróbuj renderować ScrollViewer (zawiera Grid z białym tłem)
+                                        var scrollViewer = _crosswordView.GetScrollViewer();
+                                        if (scrollViewer != null)
+                                        {
+                                            scrollViewer.UpdateLayout();
+                                            scrollViewer.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+                                            scrollViewer.Arrange(new System.Windows.Rect(scrollViewer.DesiredSize));
+                                            _screenshotService.CaptureToJpg(scrollViewer, emptyFilePath);
+                                        }
+                                        else
+                                        {
+                                            var innerGrid = _crosswordView.GetInnerGrid();
+                                            if (innerGrid != null)
+                                            {
+                                                innerGrid.UpdateLayout();
+                                                innerGrid.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+                                                innerGrid.Arrange(new System.Windows.Rect(innerGrid.DesiredSize));
+                                                _screenshotService.CaptureToJpg(innerGrid, emptyFilePath);
+                                            }
+                                            else
+                                            {
+                                                _screenshotService.CaptureToJpg(_crosswordView, emptyFilePath);
+                                            }
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        errorCount++;
+                                        System.Diagnostics.Debug.WriteLine($"Błąd zapisu pustego screenshot dla {entry.Id}: {ex.Message}");
+                                    }
+                                });
+                            }
+                        }
+
                         // Aktualizuj status
                         await Application.Current.Dispatcher.InvokeAsync(() =>
                         {
-                            StatusMessage = $"Zapisano {savedCount}/{DatasetEntries.Count} screenshotów...";
+                            StatusMessage = $"Zapisano {savedCount}/{DatasetEntries.Count} screenshotów (pełne + puste)...";
                         });
                     }
                     catch (Exception ex)
@@ -652,14 +739,19 @@ public partial class MainWindowViewModel : BaseViewModel
                 }
             });
 
-            StatusMessage = $"Zapisano {savedCount} screenshotów do {imagesDir}";
+            int emptyCount = DatasetEntries.Count(e => !string.IsNullOrEmpty(e.EmptyXaml) && 
+                (e.Type == "custom_words" || e.Type == "crossword_with_words"));
+            
+            StatusMessage = $"Zapisano {savedCount} pełnych i {emptyCount} pustych screenshotów";
             if (errorCount > 0)
             {
-                MessageBox.Show($"Zapisano {savedCount} screenshotów.\n{errorCount} błędów.", "Zakończono", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"Zapisano {savedCount} pełnych screenshotów i {emptyCount} pustych.\n{errorCount} błędów.\n\nPełne: {imagesDir}\nPuste: {imagesEmptyDir}", 
+                    "Zakończono", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
-                MessageBox.Show($"Zapisano {savedCount} screenshotów do katalogu:\n{imagesDir}", "Sukces", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"Zapisano {savedCount} pełnych screenshotów i {emptyCount} pustych.\n\nPełne: {imagesDir}\nPuste: {imagesEmptyDir}", 
+                    "Sukces", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
         catch (Exception ex)

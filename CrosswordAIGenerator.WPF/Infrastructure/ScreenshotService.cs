@@ -128,7 +128,7 @@ public class ScreenshotService : IScreenshotService
             throw new InvalidOperationException($"Cannot capture screenshot: element has no valid size (Width: {actualWidth}, Height: {actualHeight})");
         }
 
-        // Utwórz RenderTargetBitmap
+        // Utwórz RenderTargetBitmap z białym tłem
         var renderTarget = new RenderTargetBitmap(
             renderWidth,
             renderHeight,
@@ -136,18 +136,58 @@ public class ScreenshotService : IScreenshotService
             96, // DPI Y
             PixelFormats.Pbgra32);
 
+        // Wypełnij białym tłem
+        var whiteBrush = new SolidColorBrush(Colors.White);
+        var drawingVisual = new DrawingVisual();
+        using (var drawingContext = drawingVisual.RenderOpen())
+        {
+            drawingContext.DrawRectangle(whiteBrush, null, new Rect(0, 0, renderWidth, renderHeight));
+        }
+        renderTarget.Render(drawingVisual);
+
         // Renderuj element - jeśli to UserControl, spróbuj renderować bezpośrednio zawartość
         if (element is System.Windows.Controls.UserControl userControl)
         {
-            // Spróbuj znaleźć wewnętrzny Grid
-            var innerGrid = userControl.Content as System.Windows.Controls.Grid;
-            if (innerGrid != null && innerGrid.ActualWidth > 0 && innerGrid.ActualHeight > 0)
+            // Spróbuj znaleźć wewnętrzny Grid lub ScrollViewer
+            if (userControl.Content is System.Windows.Controls.ScrollViewer scrollViewer)
             {
-                renderTarget.Render(innerGrid);
+                var grid = scrollViewer.Content as System.Windows.Controls.Grid;
+                if (grid != null && grid.ActualWidth > 0 && grid.ActualHeight > 0)
+                {
+                    renderTarget.Render(grid);
+                }
+                else
+                {
+                    renderTarget.Render(scrollViewer);
+                }
+            }
+            else if (userControl.Content is System.Windows.Controls.Grid innerGrid)
+            {
+                if (innerGrid.ActualWidth > 0 && innerGrid.ActualHeight > 0)
+                {
+                    renderTarget.Render(innerGrid);
+                }
+                else
+                {
+                    renderTarget.Render(element);
+                }
             }
             else
             {
                 renderTarget.Render(element);
+            }
+        }
+        else if (element is System.Windows.Controls.ScrollViewer scrollViewer)
+        {
+            // Jeśli element to ScrollViewer, renderuj jego zawartość (Grid)
+            var grid = scrollViewer.Content as System.Windows.Controls.Grid;
+            if (grid != null && grid.ActualWidth > 0 && grid.ActualHeight > 0)
+            {
+                renderTarget.Render(grid);
+            }
+            else
+            {
+                renderTarget.Render(scrollViewer);
             }
         }
         else

@@ -122,7 +122,7 @@ public class DatasetGenerator
             grid = gridGenerator.GenerateEmptyGrid(rows, columns);
         }
 
-        var xaml = _xamlGenerator.GenerateXaml(grid);
+        var xaml = _xamlGenerator.GenerateXaml(grid, 500, 500, null, null);
         var description = GenerateDescription(grid, withWalls, wallCount);
         var searchableText = GenerateSearchableText(grid, rows, columns, withWalls, wallCount, xaml);
         var embeddingText = GenerateEmbeddingText(grid, rows, columns, withWalls, wallCount);
@@ -241,7 +241,10 @@ public class DatasetGenerator
             return Result<DatasetEntry, string>.Failure(errorMsg);
         }
         
-        var xaml = _xamlGenerator.GenerateXaml(grid, 500, 500, highlightedCellsWithIndices);
+        var xaml = _xamlGenerator.GenerateXaml(grid, 500, 500, highlightedCellsWithIndices, placedWords);
+        
+        // Generuj również pustą wersję (bez liter, tylko ramki i definicje)
+        var emptyXaml = _xamlGenerator.GenerateEmptyXaml(grid, 500, 500, highlightedCellsWithIndices, placedWords);
         
         // Zlicz litery i ściany (letterCount już policzone wyżej)
         int wallCount = grid.Cells.Values.Count(c => c.IsWall);
@@ -258,6 +261,7 @@ public class DatasetGenerator
             GridSize = $"{rows}x{columns}",
             HasWalls = wallCount > 0,
             Xaml = xaml,
+            EmptyXaml = emptyXaml,
             Description = description,
             SearchableText = searchableText,
             Metadata = new DatasetMetadata
@@ -275,7 +279,7 @@ public class DatasetGenerator
                 Timestamp = DateTime.UtcNow
             }
         };
-        
+
         return Result<DatasetEntry, string>.Success(entry);
     }
 
@@ -436,6 +440,204 @@ public class DatasetGenerator
         }
         
         return results;
+    }
+
+    /// <summary>
+    /// Generuje pojedynczą krzyżówkę z podanymi przez użytkownika słowami
+    /// </summary>
+    public Result<DatasetEntry, string> GenerateWithCustomWords(
+        int rows, int columns, string highlightedWord, List<string> customWords, int minWordsCount = 0, Dictionary<string, string>? wordDefinitions = null)
+    {
+        if (_wordPlacer == null)
+        {
+            return Result<DatasetEntry, string>.Failure("WordPlacer nie jest zainicjalizowany.");
+        }
+
+        if (string.IsNullOrWhiteSpace(highlightedWord))
+        {
+            return Result<DatasetEntry, string>.Failure("Hasło główne nie może być puste.");
+        }
+
+        if (customWords == null || customWords.Count == 0)
+        {
+            return Result<DatasetEntry, string>.Failure("Lista słów nie może być pusta.");
+        }
+
+        var result = _wordPlacer.GenerateWithCustomWords(rows, columns, highlightedWord, customWords, minWordsCount: minWordsCount);
+
+        if (result.IsFailure)
+        {
+            return Result<DatasetEntry, string>.Failure(result.Error!);
+        }
+
+        var (grid, placedWords, highlightedCellsWithIndices) = result.Value;
+
+        var xaml = _xamlGenerator.GenerateXaml(grid, width: 500, height: 500, highlightedCellsWithIndices, placedWords, wordDefinitions);
+        
+        // Generuj również pustą wersję (bez liter, tylko ramki i definicje)
+        var emptyXaml = _xamlGenerator.GenerateEmptyXaml(grid, width: 500, height: 500, highlightedCellsWithIndices, placedWords, wordDefinitions);
+        
+        // Generuj opis z definicjami
+        var description = GenerateCustomWordsDescription(highlightedWord, customWords, placedWords);
+        var searchableText = GenerateSearchableTextForCustomWords(highlightedWord, customWords, placedWords, rows, columns, xaml);
+        var embeddingText = GenerateEmbeddingTextForCustomWords(highlightedWord, customWords, placedWords, rows, columns);
+
+        var entry = new DatasetEntry
+        {
+            Id = GenerateId("custom_words", rows, columns, false),
+            Type = "custom_words",
+            GridSize = $"{rows}x{columns}",
+            HasWalls = false,
+            Xaml = xaml,
+            EmptyXaml = emptyXaml,
+            Description = description,
+            SearchableText = searchableText,
+            Metadata = new DatasetMetadata
+            {
+                Rows = rows,
+                Columns = columns,
+                WallCount = 0,
+                EmptyCellCount = grid.Cells.Values.Count(c => c.IsEmpty),
+                LetterCount = grid.Cells.Values.Count(c => c.HasLetter)
+            },
+            RagMetadata = new RagMetadata
+            {
+                EmbeddingText = embeddingText,
+                Category = "crossword_custom_words",
+                Timestamp = DateTime.UtcNow
+            }
+        };
+
+        return Result<DatasetEntry, string>.Success(entry);
+    }
+
+    /// <summary>
+    /// Generuje dataset z podanymi przez użytkownika słowami
+    /// </summary>
+    public List<DatasetEntry> GenerateCustomWordsDataset(
+        int count,
+        int rows,
+        int columns,
+        string highlightedWord,
+        List<string> customWords,
+        int minWordsCount = 0,
+        Action<int, int>? onProgress = null,
+        Dictionary<string, string>? wordDefinitions = null)
+    {
+        _logger?.InfoFormat("GenerateCustomWordsDataset: Rozpoczynam generowanie {0} krzyżówek. Hasło: '{1}', Rozmiar: {2}x{3}, Słowa: {4}, MinWordsCount: {5}", 
+            count, highlightedWord, rows, columns, string.Join(", ", customWords), minWordsCount);
+        System.Diagnostics.Debug.WriteLine($"[CURSOR] GenerateCustomWordsDataset: Rozpoczynam generowanie {count} krzyżówek. Hasło: '{highlightedWord}', Rozmiar: {rows}x{columns}, MinWordsCount: {minWordsCount}");
+        
+        var results = new List<DatasetEntry>();
+        var random = new Random();
+
+        for (int i = 0; i < count; i++)
+        {
+            onProgress?.Invoke(i + 1, count);
+            
+            _logger?.InfoFormat("GenerateCustomWordsDataset: Próba {0}/{1}, minWordsCount={2}", i + 1, count, minWordsCount);
+
+            // Można próbować z różnymi rozmiarami siatki dla większej różnorodności
+            int currentRows = rows;
+            int currentCols = columns;
+
+            var result = GenerateWithCustomWords(currentRows, currentCols, highlightedWord, customWords, minWordsCount: minWordsCount, wordDefinitions: wordDefinitions);
+
+            if (result.IsSuccess)
+            {
+                results.Add(result.Value);
+                _logger?.InfoFormat("GenerateCustomWordsDataset: Sukces {0}/{1}", results.Count, count);
+            }
+            else
+            {
+                _logger?.WarningFormat("GenerateCustomWordsDataset: Niepowodzenie {0}/{1}: {2}", i + 1, count, result.Error);
+                // Jeśli nie udało się, spróbuj z większą siatką
+                if (i < count - 1) // Nie próbuj na ostatniej iteracji
+                {
+                    currentRows = Math.Min(rows + 3, 25);
+                    currentCols = Math.Min(columns + 3, 25);
+                    _logger?.InfoFormat("GenerateCustomWordsDataset: Retry z większą siatką {0}x{1}", currentRows, currentCols);
+                    var retryResult = GenerateWithCustomWords(currentRows, currentCols, highlightedWord, customWords, minWordsCount);
+                    if (retryResult.IsSuccess)
+                    {
+                        results.Add(retryResult.Value);
+                        _logger?.InfoFormat("GenerateCustomWordsDataset: Retry sukces {0}/{1}", results.Count, count);
+                    }
+                    else
+                    {
+                        _logger?.WarningFormat("GenerateCustomWordsDataset: Retry niepowodzenie: {0}", retryResult.Error);
+                    }
+                }
+            }
+        }
+
+        _logger?.InfoFormat("GenerateCustomWordsDataset: Zakończono. Wygenerowano {0}/{1} krzyżówek", results.Count, count);
+        System.Diagnostics.Debug.WriteLine($"[CURSOR] GenerateCustomWordsDataset: Zakończono. Wygenerowano {results.Count}/{count} krzyżówek");
+        
+        if (results.Count == 0)
+        {
+            _logger?.Error("GenerateCustomWordsDataset: Nie udało się wygenerować żadnej krzyżówki!");
+        }
+        else if (results.Count < count)
+        {
+            _logger?.WarningFormat("GenerateCustomWordsDataset: Wygenerowano tylko {0} z {1} krzyżówek", results.Count, count);
+        }
+
+        return results;
+    }
+
+    private string GenerateCustomWordsDescription(string highlightedWord, List<string> customWords, List<CrosswordWord> placedWords)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"Krzyżówka z hasłem głównym: {highlightedWord}");
+        sb.AppendLine($"Liczba słów w krzyżówce: {placedWords.Count} (z {customWords.Count} dostępnych)");
+        sb.AppendLine();
+        sb.AppendLine("Słowa w krzyżówce:");
+        for (int i = 0; i < placedWords.Count; i++)
+        {
+            sb.AppendLine($"{i + 1}. {placedWords[i].Word}");
+        }
+        if (placedWords.Count < customWords.Count)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"Nieużyte słowa ({customWords.Count - placedWords.Count}):");
+            var usedWords = placedWords.Select(w => w.Word).ToHashSet();
+            var unusedWords = customWords.Where(w => !usedWords.Contains(w.ToUpper(System.Globalization.CultureInfo.GetCultureInfo("pl-PL")).Trim())).ToList();
+            for (int i = 0; i < unusedWords.Count; i++)
+            {
+                sb.AppendLine($"- {unusedWords[i]}");
+            }
+        }
+        return sb.ToString();
+    }
+
+    private string GenerateSearchableTextForCustomWords(string highlightedWord, List<string> customWords, List<CrosswordWord> placedWords, int rows, int columns, string xaml)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"Hasło główne: {highlightedWord}");
+        sb.AppendLine($"Rozmiar siatki: {rows}x{columns}");
+        sb.AppendLine();
+        sb.AppendLine("Słowa:");
+        foreach (var word in customWords)
+        {
+            sb.AppendLine($"- {word}");
+        }
+        sb.AppendLine();
+        sb.AppendLine("Umieszczone słowa:");
+        foreach (var word in placedWords)
+        {
+            sb.AppendLine($"- {word.Word} ({word.Direction})");
+        }
+        return sb.ToString();
+    }
+
+    private string GenerateEmbeddingTextForCustomWords(string highlightedWord, List<string> customWords, List<CrosswordWord> placedWords, int rows, int columns)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append($"Krzyżówka hasło {highlightedWord} ");
+        sb.Append($"słowa {string.Join(" ", customWords)} ");
+        sb.Append($"rozmiar {rows}x{columns}");
+        return sb.ToString();
     }
 
     /// <summary>
@@ -739,6 +941,12 @@ public class DatasetEntry
     public string GridSize { get; set; } = string.Empty;
     public bool HasWalls { get; set; }
     public string Xaml { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Pusta wersja XAML (bez liter, tylko ramki i definicje) - do wypełnienia ręcznie
+    /// </summary>
+    public string? EmptyXaml { get; set; }
+    
     public string Description { get; set; } = string.Empty;
     public DatasetMetadata Metadata { get; set; } = new();
     
@@ -785,4 +993,5 @@ public class RagMetadata
     /// </summary>
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 }
+
 

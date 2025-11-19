@@ -672,6 +672,153 @@ public class CrosswordWordPlacer
         
         return Result<(CrosswordGrid, List<CrosswordWord>, Dictionary<(int, int), int>), string>.Success((grid, placedWords, highlightedCellsWithIndices));
     }
+
+    /// <summary>
+    /// Generuje krzyżówkę z podanymi przez użytkownika słowami (bez losowania ze słownika)
+    /// </summary>
+    /// <param name="rows">Liczba wierszy</param>
+    /// <param name="columns">Liczba kolumn</param>
+    /// <param name="highlightedWord">Hasło główne do wyróżnienia</param>
+    /// <param name="customWords">Lista słów wprowadzonych przez użytkownika</param>
+    /// <param name="maxAttempts">Maksymalna liczba prób układania</param>
+    /// <returns>Result z tuple: (grid, placedWords, highlightedCellsWithIndices) lub błąd</returns>
+    public Result<(CrosswordGrid grid, List<CrosswordWord> placedWords, Dictionary<(int row, int col), int> highlightedCellsWithIndices), string> GenerateWithCustomWords(
+        int rows, int columns, string highlightedWord, List<string> customWords, int maxAttempts = 100, int minWordsCount = 0)
+    {
+        if (string.IsNullOrWhiteSpace(highlightedWord))
+        {
+            return Result<(CrosswordGrid, List<CrosswordWord>, Dictionary<(int, int), int>), string>.Failure("Hasło główne nie może być puste.");
+        }
+
+        if (customWords == null || customWords.Count == 0)
+        {
+            return Result<(CrosswordGrid, List<CrosswordWord>, Dictionary<(int, int), int>), string>.Failure("Lista słów nie może być pusta.");
+        }
+
+        var grid = new CrosswordGrid(rows, columns);
+        var targetHighlightedWord = highlightedWord.ToUpper(System.Globalization.CultureInfo.GetCultureInfo("pl-PL")).Trim();
+        var normalizedWords = customWords.Select(w => w.ToUpper(System.Globalization.CultureInfo.GetCultureInfo("pl-PL")).Trim()).ToList();
+
+        // Oblicz rzeczywistą liczbę słów do użycia
+        int actualWordsCount = minWordsCount > 0 && minWordsCount < targetHighlightedWord.Length 
+            ? minWordsCount 
+            : targetHighlightedWord.Length;
+
+        _logger?.InfoFormat("CrosswordWordPlacer.GenerateWithCustomWords: Hasło='{0}', długość={1}, minWordsCount={2}, actualWordsCount={3}", 
+            targetHighlightedWord, targetHighlightedWord.Length, minWordsCount, actualWordsCount);
+        System.Diagnostics.Debug.WriteLine($"[CURSOR] GenerateWithCustomWords: Hasło='{targetHighlightedWord}', długość={targetHighlightedWord.Length}, minWordsCount={minWordsCount}, actualWordsCount={actualWordsCount}");
+
+        // Wybierz losowe indeksy liter z hasła (jeśli używamy mniej słów niż liter w haśle)
+        var letterIndices = Enumerable.Range(0, targetHighlightedWord.Length).ToList();
+        if (actualWordsCount < targetHighlightedWord.Length)
+        {
+            // Wymieszaj Fisher-Yates shuffle
+            for (int i = letterIndices.Count - 1; i > 0; i--)
+            {
+                int j = _random.Next(i + 1);
+                (letterIndices[i], letterIndices[j]) = (letterIndices[j], letterIndices[i]);
+            }
+            // Wybierz pierwsze actualWordsCount i posortuj, żeby zachować kolejność liter w haśle
+            letterIndices = letterIndices.Take(actualWordsCount).OrderBy(x => x).ToList();
+            
+            var selectedLettersStr = string.Join("", letterIndices.Select(i => targetHighlightedWord[i]));
+            _logger?.InfoFormat("CrosswordWordPlacer.GenerateWithCustomWords: Wybrano {0} liter z hasła: {1} (indeksy: {2})", 
+                actualWordsCount, selectedLettersStr, string.Join(", ", letterIndices));
+            System.Diagnostics.Debug.WriteLine($"[CURSOR] GenerateWithCustomWords: Wybrano {actualWordsCount} liter: '{selectedLettersStr}' (indeksy: {string.Join(", ", letterIndices)})");
+        }
+        else
+        {
+            _logger?.InfoFormat("CrosswordWordPlacer.GenerateWithCustomWords: Używam wszystkich {0} liter z hasła", targetHighlightedWord.Length);
+            System.Diagnostics.Debug.WriteLine($"[CURSOR] GenerateWithCustomWords: Używam wszystkich {targetHighlightedWord.Length} liter z hasła");
+        }
+
+        // Mapuj słowa do wybranych liter hasła
+        var wordsForLetters = new Dictionary<int, string>(); // Indeks litery w haśle -> słowo
+        var usedWords = new HashSet<string>();
+        var highlightedWordLetters = targetHighlightedWord.ToHashSet();
+
+        foreach (int i in letterIndices)
+        {
+            char requiredLetter = targetHighlightedWord[i];
+            
+            // Znajdź słowa zawierające tę literę
+            var candidates = normalizedWords
+                .Where(w => w.Contains(requiredLetter))
+                .Where(w => !usedWords.Contains(w))
+                .Where(w => w.Length >= 6) // Minimum 6 liter
+                .ToList();
+
+            if (candidates.Count > 0)
+            {
+                // Wybierz słowo które zawiera najwięcej liter z hasła
+                var bestWord = candidates
+                    .OrderByDescending(w => w.Count(c => highlightedWordLetters.Contains(c)))
+                    .ThenBy(w => _random.Next()) // Losowość dla równych wyników
+                    .First();
+
+                wordsForLetters[i] = bestWord;
+                usedWords.Add(bestWord);
+            }
+            else
+            {
+                // Jeśli nie ma nowych słów, użyj już użytego (lepsze niż brak)
+                var fallback = normalizedWords
+                    .Where(w => w.Contains(requiredLetter))
+                    .FirstOrDefault();
+
+                if (fallback != null)
+                {
+                    wordsForLetters[i] = fallback;
+                }
+            }
+        }
+
+        // Sprawdź czy wszystkie wybrane litery hasła są pokryte
+        var allSelectedWords = string.Join("", wordsForLetters.Values);
+        var selectedLetters = letterIndices.Select(i => targetHighlightedWord[i]).ToList();
+        var missingLetters = selectedLetters.Where(letter => !allSelectedWords.Contains(letter)).ToList();
+
+        if (missingLetters.Any())
+        {
+            return Result<(CrosswordGrid, List<CrosswordWord>, Dictionary<(int, int), int>), string>.Failure(
+                $"Nie wszystkie wybrane litery hasła '{targetHighlightedWord}' są obecne w podanych słowach. Brakuje: {string.Join(", ", missingLetters.Distinct())}");
+        }
+
+        // WAŻNE: Przekazujemy oryginalne hasło, bo wordsForLetters używa oryginalnych indeksów
+        // FindAndMarkHighlightedWord będzie oznaczać tylko wybrane litery (te które są w wordsForLetters)
+        // Ale musimy przekazać skrócone hasło dla oznaczeń - tylko wybrane litery powinny być oznaczone
+        
+        // Utwórz skrócone hasło tylko z wybranych liter (dla oznaczeń w kolejności)
+        var selectedHighlightedWord = string.Join("", letterIndices.Select(i => targetHighlightedWord[i]));
+
+        _logger?.InfoFormat("CrosswordWordPlacer.GenerateWithCustomWords: Przekazuję do ArrangeWordsInGrid: selectedHighlightedWord='{0}' (z {1} liter), wordsForLetters.Count={2}, letterIndices={3}", 
+            selectedHighlightedWord, actualWordsCount, wordsForLetters.Count, string.Join(", ", letterIndices));
+        System.Diagnostics.Debug.WriteLine($"[CURSOR] GenerateWithCustomWords: Przekazuję do ArrangeWordsInGrid: selectedHighlightedWord='{selectedHighlightedWord}' (z {actualWordsCount} liter), wordsForLetters.Count={wordsForLetters.Count}");
+
+        // Użyj istniejącej metody ArrangeWordsInGrid do układania
+        // Przekazujemy skrócone hasło - FindAndMarkHighlightedWord użyje tylko tych liter do oznaczeń
+        // wordsForLetters zawiera mapowanie na oryginalne indeksy, ale ArrangeWordsInGrid używa highlightedWord[kvp.Key]
+        // więc musimy przekazać oryginalne hasło, ale oznaczyć tylko wybrane litery
+        
+        // Rozwiązanie: Przekazujemy skrócone hasło, ale musimy zmienić mapowanie w wordsForLetters
+        // na indeksy w skróconym haśle zamiast oryginalnych indeksów
+        var remappedWordsForLetters = new Dictionary<int, string>();
+        int newIndex = 0;
+        foreach (var originalIndex in letterIndices.OrderBy(x => x))
+        {
+            if (wordsForLetters.ContainsKey(originalIndex))
+            {
+                remappedWordsForLetters[newIndex] = wordsForLetters[originalIndex];
+                newIndex++;
+            }
+        }
+
+        _logger?.InfoFormat("CrosswordWordPlacer.GenerateWithCustomWords: Przemapowano wordsForLetters: {0} -> {1} wpisów", 
+            wordsForLetters.Count, remappedWordsForLetters.Count);
+        System.Diagnostics.Debug.WriteLine($"[CURSOR] GenerateWithCustomWords: Przemapowano wordsForLetters: {wordsForLetters.Count} -> {remappedWordsForLetters.Count} wpisów");
+
+        return ArrangeWordsInGrid(grid, remappedWordsForLetters, selectedHighlightedWord, rows, columns, maxAttempts);
+    }
     
     /// <summary>
     /// Układa słowa w siatce krzyżówki, próbując je połączyć przecięciami
@@ -909,15 +1056,24 @@ public class CrosswordWordPlacer
         }
         
         // Ostateczna walidacja: upewnij się że mamy dokładnie tyle słów ile liter w haśle
+        _logger?.InfoFormat("CrosswordWordPlacer.ArrangeWordsInGrid: Zakończono. placedWords.Count={0}, highlightedWord.Length={1}, wordsForLetters.Count={2}", 
+            placedWords.Count, highlightedWord.Length, wordsForLetters.Count);
+        System.Diagnostics.Debug.WriteLine($"[CURSOR] ArrangeWordsInGrid: Zakończono. placedWords.Count={placedWords.Count}, highlightedWord.Length={highlightedWord.Length}, wordsForLetters.Count={wordsForLetters.Count}");
+        
         if (placedWords.Count != highlightedWord.Length)
         {
             // Jeśli nadal nie pasuje, to znaczy że nie udało się umieścić wszystkich słów
-            // Można dodać logging lub rzucić wyjątek
-            // Na razie po prostu zwracamy to co mamy
+            _logger?.WarningFormat("CrosswordWordPlacer.ArrangeWordsInGrid: UWAGA! placedWords.Count ({0}) != highlightedWord.Length ({1})", 
+                placedWords.Count, highlightedWord.Length);
+            System.Diagnostics.Debug.WriteLine($"[CURSOR] ArrangeWordsInGrid: UWAGA! placedWords.Count ({placedWords.Count}) != highlightedWord.Length ({highlightedWord.Length})");
         }
         
         // Na końcu: przeszukaj całą siatkę i znajdź wszystkie litery hasła
         // To zapewnia, że wszystkie litery (w tym powtarzające się) są poprawnie oznaczone
+        // UWAGA: highlightedWord tutaj to już selectedHighlightedWord (skrócone hasło z tylko wybranymi literami)
+        _logger?.InfoFormat("CrosswordWordPlacer.ArrangeWordsInGrid: Wywołuję FindAndMarkHighlightedWord z highlightedWord='{0}' (długość={1})", 
+            highlightedWord, highlightedWord.Length);
+        System.Diagnostics.Debug.WriteLine($"[CURSOR] ArrangeWordsInGrid: Wywołuję FindAndMarkHighlightedWord z highlightedWord='{highlightedWord}' (długość={highlightedWord.Length})");
         FindAndMarkHighlightedWord(grid, highlightedWord, highlightedCellsWithIndices);
         
         return Result<(CrosswordGrid, List<CrosswordWord>, Dictionary<(int, int), int>), string>.Success((grid, placedWords, highlightedCellsWithIndices));
@@ -1465,7 +1621,12 @@ public class CrosswordWordPlacer
         // Używamy HashSet do śledzenia już użytych pozycji, żeby nie używać tej samej pozycji dwa razy
         var usedPositions = new HashSet<(int row, int col)>();
         
+        _logger?.InfoFormat("CrosswordWordPlacer.FindAndMarkHighlightedWord: Oznaczam hasło '{0}' (długość={1})", 
+            highlightedWord, highlightedWord.Length);
+        System.Diagnostics.Debug.WriteLine($"[CURSOR] FindAndMarkHighlightedWord: Oznaczam hasło '{highlightedWord}' (długość={highlightedWord.Length})");
+        
         // Przechodzimy przez hasło litera po literze (w kolejności)
+        int markedCount = 0;
         for (int i = 0; i < highlightedWord.Length; i++)
         {
             char letter = highlightedWord[i];
@@ -1484,6 +1645,9 @@ public class CrosswordWordPlacer
                     var selectedPos = availablePositions[_random.Next(availablePositions.Count)];
                     highlightedCellsWithIndices[selectedPos] = letterIndex;
                     usedPositions.Add(selectedPos);
+                    markedCount++;
+                    _logger?.InfoFormat("CrosswordWordPlacer.FindAndMarkHighlightedWord: Oznaczono literę {0} ('{1}') na pozycji ({2}, {3})", 
+                        letterIndex, letter, selectedPos.row, selectedPos.col);
                 }
                 else
                 {

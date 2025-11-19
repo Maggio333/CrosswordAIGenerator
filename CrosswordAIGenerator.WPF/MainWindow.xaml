@@ -16,15 +16,18 @@
     </Window.Resources>
     
     
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="200"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <TabControl>
+        <!-- Zakładka 1: Automatyczne generowanie -->
+        <TabItem Header="Automatyczne">
+            <Grid Margin="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="200"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-        <!-- Panel Kontrolny -->
+                <!-- Panel Kontrolny -->
         <GroupBox Grid.Row="0" Header="Panel Kontrolny" Margin="0,0,0,10">
             <Grid Margin="10">
                 <Grid.ColumnDefinitions>
@@ -130,9 +133,9 @@
                 <Button Grid.Row="1" Grid.Column="4" Content="Eksport JSON" 
                         Command="{Binding ExportToJsonCommand}" 
                         Margin="5,10,5,0" Padding="10,5"/>
-                <Button Grid.Row="1" Grid.Column="5" Content="Zapisz JPG" 
+                <Button Grid.Row="1" Grid.Column="5" Content="Zapisz JPG (pełne + puste)" 
                         Command="{Binding SaveScreenshotsToImagesCommand}" 
-                        Margin="5,10,0,0" Padding="10,5">
+                        Margin="5,10,5,0" Padding="10,5">
                     <Button.Style>
                         <Style TargetType="Button">
                             <Setter Property="IsEnabled" Value="True"/>
@@ -144,7 +147,7 @@
                         </Style>
                     </Button.Style>
                 </Button>
-                <Button Grid.Row="1" Grid.Column="5" Content="Wyczyść" 
+                <Button Grid.Row="1" Grid.Column="6" Content="Wyczyść" 
                         Command="{Binding ClearDataCommand}" 
                         Margin="5,10,0,0" Padding="10,5"/>
             </Grid>
@@ -238,5 +241,12 @@
                 </TextBlock>
             </StatusBarItem>
         </StatusBar>
-    </Grid>
+            </Grid>
+        </TabItem>
+        
+        <!-- Zakładka 2: Własne słowa -->
+        <TabItem Header="Własne słowa" Loaded="CustomWordsTabItem_Loaded">
+            <views:CustomWordsView x:Name="CustomWordsViewControl"/>
+        </TabItem>
+    </TabControl>
 </Window>

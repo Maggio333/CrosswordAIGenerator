@@ -14,6 +14,49 @@ a projekt używa [Semantic Versioning](https://semver.org/lang/pl/).
 - Eksport do Qdrant (integracja z ChatElioraSystem)
 - LoRA Dataset Exporter
 
+## [1.1.0] - 2025-11-19
+
+### ✨ Dodano
+
+#### Nowe funkcjonalności
+- **Zakładka "Własne słowa"** - generowanie krzyżówek z własnymi słowami i definicjami
+- **Puste wersje krzyżówek** - automatyczne generowanie pustych wersji (bez liter, tylko ramki i definicje) do wypełnienia ręcznie
+- **Obszar z definicjami** - wyświetlanie definicji słów po prawej stronie krzyżówki w osobnym obszarze
+- **Ramki wokół słów** - czarne ramki wokół słów z numeracją (1, 2, 3...)
+- **ScrollViewer** - przewijanie dla dużych krzyżówek i obszaru z definicjami
+- **Eksport pełnych i pustych screenshotów** - jednoczesny eksport obu wersji do osobnych katalogów
+- **Min. liczba słów** - opcja wyboru minimalnej liczby słów w krzyżówce (mniej niż liczba liter w haśle)
+
+#### UI/UX
+- **Dodatkowa zakładka** - "Własne słowa" dla generowania krzyżówek z własnymi słowami
+- **Synchronizacja datasetów** - krzyżówki z zakładki "Własne słowa" są widoczne w zakładce "Automatyczne"
+- **Białe tło w screenshotach** - poprawione renderowanie z białym tłem zamiast czarnego
+- **Kwadratowe komórki** - stały rozmiar komórek (35x35px) dla lepszej czytelności
+
+### 🔧 Zmieniono
+
+#### XAML Generator
+- **ScrollViewer wokół Grid** - możliwość przewijania dużych krzyżówek
+- **Białe tło** - dodano `Background="White"` do ScrollViewer i Grid
+- **Czarne ramki** - zmieniono `BorderBrush="Blue"` na `BorderBrush="Black"`
+- **Obszar z definicjami** - definicje wyświetlane w osobnym obszarze po prawej stronie zamiast w komórkach
+- **Pozycjonowanie** - krzyżówka pozycjonowana w lewym górnym rogu (`HorizontalAlignment="Left"`, `VerticalAlignment="Top"`)
+
+#### Dataset Generator
+- **Automatyczne generowanie pustych wersji** - każda krzyżówka ze słowami ma teraz również pustą wersję w `DatasetEntry.EmptyXaml`
+- **Eksport do dwóch katalogów** - pełne wersje do `images/`, puste do `images_empty/`
+
+#### Screenshot Service
+- **Białe tło** - wypełnianie białym tłem przed renderowaniem
+- **Obsługa ScrollViewer** - poprawne renderowanie ScrollViewer z zawartością
+
+### 🐛 Naprawiono
+
+- **Czarne tło w screenshotach** - dodano białe tło do XAML i ScreenshotService
+- **Ucięte krzyżówki** - dodano ScrollViewer i stałe rozmiary komórek
+- **Błąd STA przy parsowaniu XAML** - usunięto problematyczną metodę parsowania XAML na wątku tła
+- **Pozycjonowanie krzyżówek** - krzyżówki są teraz pozycjonowane w lewym górnym rogu
+
 ## [1.0.0] - 2025-11-19
 
 ### ✨ Dodano
