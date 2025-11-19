@@ -88,6 +88,10 @@ public class XamlGenerator : IXamlGenerator
         sb.AppendLine("<Setter Property=\"HorizontalAlignment\" Value=\"Center\"/>");
         sb.AppendLine("<Setter Property=\"VerticalAlignment\" Value=\"Center\"/>");
         sb.AppendLine("</Style>");
+        sb.AppendLine("<Style TargetType=\"Border\">");
+        sb.AppendLine("<Setter Property=\"BorderBrush\" Value=\"Black\"/>");
+        sb.AppendLine("<Setter Property=\"BorderThickness\" Value=\"1\"/>");
+        sb.AppendLine("</Style>");
         sb.AppendLine("</Grid.Resources>");
         // Ustaw stałą wysokość dla wierszy (kwadratowe komórki)
         // cellSize i hasDefinitions/totalRows są już zdefiniowane wyżej
@@ -140,39 +144,6 @@ public class XamlGenerator : IXamlGenerator
                     // Sprawdź które słowa przechodzą przez tę komórkę (dla ramek)
                     var wordsAtCell = cellToWords.ContainsKey((r, c)) ? cellToWords[(r, c)] : new List<CrosswordWord>();
                     
-                    // Oblicz które krawędzie są zewnętrzne dla słów (gdzie są ramki)
-                    int borderTop = 1, borderBottom = 1, borderLeft = 1, borderRight = 1; // Domyślnie cienka ramka
-                    if (wordsAtCell.Count > 0)
-                    {
-                        foreach (var word in wordsAtCell)
-                        {
-                            var positions = word.GetCellPositions().ToList();
-                            int posIndex = positions.FindIndex(p => p.row == r && p.col == c);
-                            
-                            // Góra - czy poprzednia komórka nie należy do tego słowa?
-                            if (word.IsVertical && (posIndex == 0 || !positions.Any(p => p.row == r - 1 && p.col == c)))
-                            {
-                                borderTop = 3; // Grubsza ramka dla zewnętrznej krawędzi słowa
-                            }
-                            // Dół - czy następna komórka nie należy do tego słowa?
-                            if (word.IsVertical && (posIndex == positions.Count - 1 || !positions.Any(p => p.row == r + 1 && p.col == c)))
-                            {
-                                borderBottom = 3;
-                            }
-                            // Lewo - czy poprzednia komórka nie należy do tego słowa?
-                            if (word.IsHorizontal && (posIndex == 0 || !positions.Any(p => p.row == r && p.col == c - 1)))
-                            {
-                                borderLeft = 3;
-                            }
-                            // Prawo - czy następna komórka nie należy do tego słowa?
-                            if (word.IsHorizontal && (posIndex == positions.Count - 1 || !positions.Any(p => p.row == r && p.col == c + 1)))
-                            {
-                                borderRight = 3;
-                            }
-                        }
-                    }
-                    string borderThickness = $"{borderTop},{borderRight},{borderBottom},{borderLeft}";
-                    
                     // Polskie znaki działają bezpośrednio w XAML, ale escapujmy znaki specjalne XML
                     char letterChar = cell.Letter.Value;
                     string letter = letterChar.ToString();
@@ -190,20 +161,12 @@ public class XamlGenerator : IXamlGenerator
                     if (isHighlighted && letterIndex > 0)
                     {
                         // Highlighted - Background + litera + numer (Grid wewnątrz Border dla dwóch TextBlocków)
-                        // Style z głównego Grid.Resources może nie działać przez Border, więc dodajemy style do wewnętrznego Grid
+                        // Style z głównego Grid.Resources są dziedziczone przez drzewo wizualne
                         _logger?.DebugFormat("XamlGenerator.GenerateXaml: Oznaczam komórkę ({0}, {1}) z literą '{2}' i indeksem {3}", 
                             r, c, letter, letterIndex);
-                        sb.AppendLine($"<Border Grid.Row=\"{r}\" Grid.Column=\"{c}\" Background=\"LightCoral\" BorderBrush=\"Black\" BorderThickness=\"{borderThickness}\">");
+                        sb.AppendLine($"<Border Grid.Row=\"{r}\" Grid.Column=\"{c}\" Background=\"LightCoral\">");
                         sb.AppendLine("<Grid>");
-                        sb.AppendLine("<Grid.Resources>");
-                        sb.AppendLine("<Style TargetType=\"TextBlock\">");
-                        sb.AppendLine("<Setter Property=\"FontFamily\" Value=\"Segoe UI\"/>");
-                        sb.AppendLine("<Setter Property=\"FontSize\" Value=\"20\"/>");
-                        sb.AppendLine("<Setter Property=\"HorizontalAlignment\" Value=\"Center\"/>");
-                        sb.AppendLine("<Setter Property=\"VerticalAlignment\" Value=\"Center\"/>");
-                        sb.AppendLine("</Style>");
-                        sb.AppendLine("</Grid.Resources>");
-                        // Litera - dziedziczy wszystkie właściwości z wewnętrznego Grid.Resources Style
+                        // Litera - dziedziczy Style z głównego Grid.Resources
                         sb.AppendLine($"<TextBlock Text=\"{letter}\"/>");
                         // Numer indeksu hasła (czerwony, lewy górny róg)
                         sb.AppendLine($"<TextBlock Text=\"{letterIndex}\" FontSize=\"10\" Foreground=\"DarkRed\" HorizontalAlignment=\"Left\" VerticalAlignment=\"Top\"/>");
@@ -221,16 +184,9 @@ public class XamlGenerator : IXamlGenerator
                         // Zwykła litera - z ramką jeśli jest częścią słowa
                         if (wordsAtCell.Count > 0)
                         {
-                            sb.AppendLine($"<Border Grid.Row=\"{r}\" Grid.Column=\"{c}\" BorderBrush=\"Black\" BorderThickness=\"{borderThickness}\">");
+                            sb.AppendLine($"<Border Grid.Row=\"{r}\" Grid.Column=\"{c}\">");
                             sb.AppendLine("<Grid>");
-                            sb.AppendLine("<Grid.Resources>");
-                            sb.AppendLine("<Style TargetType=\"TextBlock\">");
-                            sb.AppendLine("<Setter Property=\"FontFamily\" Value=\"Segoe UI\"/>");
-                            sb.AppendLine("<Setter Property=\"FontSize\" Value=\"20\"/>");
-                            sb.AppendLine("<Setter Property=\"HorizontalAlignment\" Value=\"Center\"/>");
-                            sb.AppendLine("<Setter Property=\"VerticalAlignment\" Value=\"Center\"/>");
-                            sb.AppendLine("</Style>");
-                            sb.AppendLine("</Grid.Resources>");
+                            // Litera - dziedziczy Style z głównego Grid.Resources
                             sb.AppendLine($"<TextBlock Text=\"{letter}\"/>");
                             // Numer słowa (niebieski, prawy górny róg) - tylko jeśli to pierwsza litera słowa
                             if (wordNumber > 0)
@@ -379,6 +335,10 @@ public class XamlGenerator : IXamlGenerator
         sb.AppendLine("<Setter Property=\"HorizontalAlignment\" Value=\"Center\"/>");
         sb.AppendLine("<Setter Property=\"VerticalAlignment\" Value=\"Center\"/>");
         sb.AppendLine("</Style>");
+        sb.AppendLine("<Style TargetType=\"Border\">");
+        sb.AppendLine("<Setter Property=\"BorderBrush\" Value=\"Black\"/>");
+        sb.AppendLine("<Setter Property=\"BorderThickness\" Value=\"1\"/>");
+        sb.AppendLine("</Style>");
         sb.AppendLine("</Grid.Resources>");
         
         sb.AppendLine("<Grid.RowDefinitions>");
@@ -426,48 +386,11 @@ public class XamlGenerator : IXamlGenerator
                     
                     var wordsAtCell = cellToWords.ContainsKey((r, c)) ? cellToWords[(r, c)] : new List<CrosswordWord>();
                     
-                    // Oblicz ramki (identycznie jak w GenerateXaml)
-                    int borderTop = 1, borderBottom = 1, borderLeft = 1, borderRight = 1;
-                    if (wordsAtCell.Count > 0)
-                    {
-                        foreach (var word in wordsAtCell)
-                        {
-                            var positions = word.GetCellPositions().ToList();
-                            int posIndex = positions.FindIndex(p => p.row == r && p.col == c);
-                            
-                            if (word.IsVertical && (posIndex == 0 || !positions.Any(p => p.row == r - 1 && p.col == c)))
-                            {
-                                borderTop = 3;
-                            }
-                            if (word.IsVertical && (posIndex == positions.Count - 1 || !positions.Any(p => p.row == r + 1 && p.col == c)))
-                            {
-                                borderBottom = 3;
-                            }
-                            if (word.IsHorizontal && (posIndex == 0 || !positions.Any(p => p.row == r && p.col == c - 1)))
-                            {
-                                borderLeft = 3;
-                            }
-                            if (word.IsHorizontal && (posIndex == positions.Count - 1 || !positions.Any(p => p.row == r && p.col == c + 1)))
-                            {
-                                borderRight = 3;
-                            }
-                        }
-                    }
-                    string borderThickness = $"{borderTop},{borderRight},{borderBottom},{borderLeft}";
-                    
                     if (isHighlighted && letterIndex > 0)
                     {
                         // Highlighted - Background + numer indeksu (BEZ litery)
-                        sb.AppendLine($"<Border Grid.Row=\"{r}\" Grid.Column=\"{c}\" Background=\"LightCoral\" BorderBrush=\"Black\" BorderThickness=\"{borderThickness}\">");
+                        sb.AppendLine($"<Border Grid.Row=\"{r}\" Grid.Column=\"{c}\" Background=\"LightCoral\">");
                         sb.AppendLine("<Grid>");
-                        sb.AppendLine("<Grid.Resources>");
-                        sb.AppendLine("<Style TargetType=\"TextBlock\">");
-                        sb.AppendLine("<Setter Property=\"FontFamily\" Value=\"Segoe UI\"/>");
-                        sb.AppendLine("<Setter Property=\"FontSize\" Value=\"20\"/>");
-                        sb.AppendLine("<Setter Property=\"HorizontalAlignment\" Value=\"Center\"/>");
-                        sb.AppendLine("<Setter Property=\"VerticalAlignment\" Value=\"Center\"/>");
-                        sb.AppendLine("</Style>");
-                        sb.AppendLine("</Grid.Resources>");
                         // Numer indeksu hasła (czerwony, lewy górny róg) - BEZ litery
                         sb.AppendLine($"<TextBlock Text=\"{letterIndex}\" FontSize=\"10\" Foreground=\"DarkRed\" HorizontalAlignment=\"Left\" VerticalAlignment=\"Top\"/>");
                         // Numer słowa (niebieski, prawy górny róg)
@@ -483,16 +406,8 @@ public class XamlGenerator : IXamlGenerator
                         // Zwykła komórka - tylko ramka i numer słowa (BEZ litery)
                         if (wordsAtCell.Count > 0)
                         {
-                            sb.AppendLine($"<Border Grid.Row=\"{r}\" Grid.Column=\"{c}\" BorderBrush=\"Black\" BorderThickness=\"{borderThickness}\">");
+                            sb.AppendLine($"<Border Grid.Row=\"{r}\" Grid.Column=\"{c}\">");
                             sb.AppendLine("<Grid>");
-                            sb.AppendLine("<Grid.Resources>");
-                            sb.AppendLine("<Style TargetType=\"TextBlock\">");
-                            sb.AppendLine("<Setter Property=\"FontFamily\" Value=\"Segoe UI\"/>");
-                            sb.AppendLine("<Setter Property=\"FontSize\" Value=\"20\"/>");
-                            sb.AppendLine("<Setter Property=\"HorizontalAlignment\" Value=\"Center\"/>");
-                            sb.AppendLine("<Setter Property=\"VerticalAlignment\" Value=\"Center\"/>");
-                            sb.AppendLine("</Style>");
-                            sb.AppendLine("</Grid.Resources>");
                             // Numer słowa (niebieski, prawy górny róg)
                             if (wordNumber > 0)
                             {
