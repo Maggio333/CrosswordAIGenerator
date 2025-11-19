@@ -301,7 +301,9 @@ Wszystkie dokumenty znajdują się w katalogu [`docs/`](docs/):
 
 ## 📄 Licencja
 
-MIT License - zobacz [LICENSE](LICENSE) (jeśli istnieje)
+Ten projekt jest licencjonowany na licencji MIT - zobacz plik [LICENSE](LICENSE) dla szczegółów.
+
+**Copyright (c) 2025 Arkadiusz Słota**
 
 ## 🙏 Podziękowania
 
