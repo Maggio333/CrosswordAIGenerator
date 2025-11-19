@@ -1,0 +1,9 @@
+﻿<Application x:Class="CrosswordAIGenerator.WPF.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:CrosswordAIGenerator.WPF">
+    <!-- StartupUri usunięty - okno jest tworzone w OnStartup z DI -->
+    <Application.Resources>
+         
+    </Application.Resources>
+</Application>

@@ -1,0 +1,242 @@
+﻿<Window x:Class="CrosswordAIGenerator.WPF.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:CrosswordAIGenerator.WPF"
+        xmlns:converters="clr-namespace:CrosswordAIGenerator.WPF.Converters"
+        xmlns:views="clr-namespace:CrosswordAIGenerator.WPF.Presentation.Views"
+        xmlns:viewModels="clr-namespace:CrosswordAIGenerator.WPF.Presentation.ViewModels"
+        mc:Ignorable="d"
+        Title="Crossword AI Dataset Generator" Height="800" Width="1200">
+    <!-- DataContext ustawiany w code-behind z DI -->
+    <Window.Resources>
+        <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+        <converters:BooleanToTextConverter x:Key="BooleanToTextConverter"/>
+    </Window.Resources>
+    
+    
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="200"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Panel Kontrolny -->
+        <GroupBox Grid.Row="0" Header="Panel Kontrolny" Margin="0,0,0,10">
+            <Grid Margin="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Rozmiar siatki -->
+                <Label Grid.Row="0" Grid.Column="0" Content="Rozmiar:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+                    <TextBox Text="{Binding GridSizeRows, UpdateSourceTrigger=PropertyChanged}" 
+                             Width="50" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                    <Label Content="x" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBox Text="{Binding GridSizeColumns, UpdateSourceTrigger=PropertyChanged}" 
+                             Width="50" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Ściany -->
+                <Label Grid.Row="0" Grid.Column="2" Content="Ściany:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                <CheckBox Grid.Row="0" Grid.Column="3" IsChecked="{Binding HasWalls}" 
+                          Content="Tak" VerticalAlignment="Center"/>
+
+                <!-- Prawdopodobieństwo ściany -->
+                <Label Grid.Row="0" Grid.Column="4" Content="Prawdop.:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                <TextBox Grid.Row="0" Grid.Column="5" Text="{Binding WallProbability, UpdateSourceTrigger=PropertyChanged}" 
+                         Width="60" VerticalAlignment="Center" IsEnabled="{Binding GenerateWithWords, Converter={StaticResource InverseBooleanConverter}}"/>
+
+                <!-- Tryb generowania -->
+                <Label Grid.Row="0" Grid.Column="6" Content="Tryb:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                <CheckBox Grid.Row="0" Grid.Column="7" IsChecked="{Binding GenerateWithWords}" 
+                          Content="Ze słowami" VerticalAlignment="Center"/>
+                
+                <!-- Liczba słów (tylko gdy ze słowami) -->
+                <Label Grid.Row="1" Grid.Column="6" Content="Słowa:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                <TextBox Grid.Row="1" Grid.Column="7" Text="{Binding TargetWordCount, UpdateSourceTrigger=PropertyChanged}" 
+                         Width="60" VerticalAlignment="Center" IsEnabled="{Binding GenerateWithWords}"/>
+                
+                <!-- Hasło główne (czerwona ramka) -->
+                <Label Grid.Row="2" Grid.Column="6" Content="Hasło:" VerticalAlignment="Center" Margin="10,5,5,0"/>
+                <TextBox Grid.Row="2" Grid.Column="7" Text="{Binding HighlightedWord, UpdateSourceTrigger=PropertyChanged}" 
+                         Width="120" VerticalAlignment="Center" IsEnabled="{Binding GenerateWithWords}"
+                         ToolTip="Słowo do wyróżnienia czerwoną ramką (hasło główne)"
+                         FontFamily="Segoe UI"/>
+
+                <!-- Przyciski -->
+                <Button Grid.Row="1" Grid.Column="0" Content="Generuj Pojedynczy" 
+                        Command="{Binding GenerateSingleCommand}" 
+                        Margin="0,10,5,0" Padding="10,5">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsGenerating}" Value="True">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button Grid.Row="2" Grid.Column="0" Content="Zapisz JPG" 
+                        Command="{Binding SaveSingleScreenshotCommand}" 
+                        Margin="0,5,5,0" Padding="10,5">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsGenerating}" Value="True">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button Grid.Row="1" Grid.Column="1" Content="Generuj Dataset" 
+                        Command="{Binding GenerateDatasetCommand}" 
+                        Margin="5,10,5,0" Padding="10,5">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsGenerating}" Value="True">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Label Grid.Row="1" Grid.Column="2" Content="Ilość:" VerticalAlignment="Center" Margin="5,10,5,0"/>
+                <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding DatasetCount, UpdateSourceTrigger=PropertyChanged}" 
+                         Width="60" Margin="0,10,5,0" VerticalAlignment="Center" 
+                         ToolTip="Liczba przykładów w datasecie (1-10000)"/>
+                <Button Grid.Row="1" Grid.Column="4" Content="Eksport JSON" 
+                        Command="{Binding ExportToJsonCommand}" 
+                        Margin="5,10,5,0" Padding="10,5"/>
+                <Button Grid.Row="1" Grid.Column="5" Content="Zapisz JPG" 
+                        Command="{Binding SaveScreenshotsToImagesCommand}" 
+                        Margin="5,10,0,0" Padding="10,5">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsGenerating}" Value="True">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button Grid.Row="1" Grid.Column="5" Content="Wyczyść" 
+                        Command="{Binding ClearDataCommand}" 
+                        Margin="5,10,0,0" Padding="10,5"/>
+            </Grid>
+        </GroupBox>
+
+        <!-- Główny obszar: Lista datasetów, CrosswordView i XAML Preview -->
+        <Grid Grid.Row="1" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Lista wygenerowanych krzyżówek -->
+            <GroupBox Grid.Column="0" Header="Dataset">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="{Binding DatasetEntries.Count, StringFormat='Liczba: {0}'}" 
+                               Margin="5" FontWeight="Bold"/>
+                    <ListBox Grid.Row="1" 
+                             ItemsSource="{Binding DatasetEntries}"
+                             SelectedItem="{Binding SelectedDatasetEntry}"
+                             Margin="5">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Vertical" Margin="2">
+                                    <TextBlock Text="{Binding Id}" FontWeight="Bold" FontSize="10"/>
+                                    <TextBlock Text="{Binding Type}" FontSize="9" Foreground="Gray"/>
+                                    <TextBlock Text="{Binding GridSize}" FontSize="9" Foreground="DarkBlue"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </GroupBox>
+
+            <!-- CrosswordView -->
+            <GroupBox Grid.Column="2" Header="Renderowana Krzyżówka">
+                <views:CrosswordView x:Name="CrosswordViewControl" />
+            </GroupBox>
+
+            <!-- XAML Preview -->
+            <GroupBox Grid.Column="4" Header="XAML Preview">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                    <TextBox Text="{Binding XamlText, Mode=OneWay}" 
+                             IsReadOnly="True" 
+                             FontFamily="Consolas" 
+                             FontSize="11"
+                             TextWrapping="Wrap"
+                             AcceptsReturn="True"/>
+                </ScrollViewer>
+            </GroupBox>
+        </Grid>
+
+        <!-- Status Bar -->
+        <StatusBar Grid.Row="3">
+            <StatusBarItem>
+                <TextBlock>
+                    <Run Text="Status: "/>
+                    <Run Text="{Binding StatusMessage}" FontWeight="Bold"/>
+                </TextBlock>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem>
+                <TextBlock>
+                    <Run Text="Wygenerowano: "/>
+                    <Run Text="{Binding GeneratedCount}" FontWeight="Bold"/>
+                    <Run Text=" / "/>
+                    <Run Text="{Binding DatasetCount}"/>
+                </TextBlock>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem>
+                <TextBlock>
+                    <Run Text="Rozmiar siatki: "/>
+                    <Run Text="{Binding GridSizeRows}"/>
+                    <Run Text="x"/>
+                    <Run Text="{Binding GridSizeColumns}"/>
+                </TextBlock>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem>
+                <TextBlock>
+                    <Run Text="Tryb: "/>
+                    <Run Text="{Binding GenerateWithWords, Converter={StaticResource BooleanToTextConverter}}"/>
+                </TextBlock>
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>
