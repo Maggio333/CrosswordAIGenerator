@@ -310,8 +310,7 @@ public class XamlGenerator : IXamlGenerator
                     sb.AppendLine("<Border BorderBrush=\"DarkBlue\" BorderThickness=\"1\" Margin=\"0,0,0,5\" Padding=\"5\" Background=\"White\">");
                     sb.AppendLine("<StackPanel>");
                     sb.AppendLine($"<TextBlock FontSize=\"12\" FontWeight=\"Bold\" Foreground=\"Blue\" Margin=\"0,0,0,3\">");
-                    sb.AppendLine($"<Run Text=\"{word.Id}. \"/>");
-                    sb.AppendLine($"<Run Text=\"{word.Word}\"/>");
+                    sb.AppendLine($"<Run Text=\"{word.Id}.\"/>");
                     sb.AppendLine("</TextBlock>");
                     sb.AppendLine($"<TextBlock Text=\"{escapedDefinition}\" FontSize=\"11\" TextWrapping=\"Wrap\" Foreground=\"Black\"/>");
                     sb.AppendLine("</StackPanel>");
@@ -558,8 +557,7 @@ public class XamlGenerator : IXamlGenerator
                     sb.AppendLine("<Border BorderBrush=\"DarkBlue\" BorderThickness=\"1\" Margin=\"0,0,0,5\" Padding=\"5\" Background=\"White\">");
                     sb.AppendLine("<StackPanel>");
                     sb.AppendLine($"<TextBlock FontSize=\"12\" FontWeight=\"Bold\" Foreground=\"Blue\" Margin=\"0,0,0,3\">");
-                    sb.AppendLine($"<Run Text=\"{word.Id}. \"/>");
-                    sb.AppendLine($"<Run Text=\"{word.Word}\"/>");
+                    sb.AppendLine($"<Run Text=\"{word.Id}.\"/>");
                     sb.AppendLine("</TextBlock>");
                     sb.AppendLine($"<TextBlock Text=\"{escapedDefinition}\" FontSize=\"11\" TextWrapping=\"Wrap\" Foreground=\"Black\"/>");
                     sb.AppendLine("</StackPanel>");
