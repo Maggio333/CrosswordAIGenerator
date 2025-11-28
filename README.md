@@ -107,29 +107,82 @@ Projekt wykorzystuje **Clean Architecture** z podziałem na warstwy:
 ```
 CrosswordAIGenerator/
 ├── CrosswordAIGenerator.Core/          # Biblioteka core (niezależna od UI)
-│   ├── Domain/                         # Logika biznesowa
+│   ├── Domain/                         # Logika biznesowa (interfejsy, modele)
 │   │   ├── Models/                     # Modele domenowe
-│   │   ├── Services/                   # Interfejsy serwisów
-│   │   └── Common/                     # Wspólne typy (Result<T, TError>)
+│   │   │   ├── CrosswordGrid.cs
+│   │   │   ├── CrosswordWord.cs
+│   │   │   ├── DatasetEntry.cs
+│   │   │   └── ...
+│   │   ├── Services/                   # Interfejsy serwisów (tylko interfejsy!)
+│   │   │   ├── IWordDictionary.cs
+│   │   │   ├── IXamlGenerator.cs
+│   │   │   ├── ICrossGridGenerator.cs
+│   │   │   ├── IConfigService.cs
+│   │   │   ├── IEmptyGridGenerator.cs
+│   │   │   ├── IWordsDatasetGenerator.cs
+│   │   │   ├── ICustomWordsDatasetGenerator.cs
+│   │   │   ├── IDatasetExporter.cs
+│   │   │   ├── IDatasetDescriptionGenerator.cs
+│   │   │   ├── IDatasetPromptGenerator.cs
+│   │   │   ├── IDictionaryPathResolver.cs
+│   │   │   └── ... (wszystkie interfejsy)
+│   │   └── Common/                     # Wspólne typy
+│   │       ├── Result.cs               # Railway Oriented Programming
+│   │       └── Constants.cs            # Stałe (magic numbers)
+│   │
+│   ├── Application_/                   # Warstwa aplikacyjna (use cases)
+│   │   └── Services/                   # Orkiestracja i logika biznesowa
+│   │       ├── DatasetGenerator.cs     # Główny orchestrator
+│   │       ├── WordsDatasetGenerator.cs
+│   │       ├── CustomWordsDatasetGenerator.cs
+│   │       ├── EmptyGridDatasetGenerator.cs
+│   │       ├── DatasetDescriptionGenerator.cs
+│   │       ├── DatasetPromptGenerator.cs
+│   │       ├── ConfigService.cs
+│   │       ├── WordIntersectionFinder.cs
+│   │       └── CrosswordWordPlacer.cs  # Logika układania słów w krzyżówce
+│   │
 │   ├── Infrastructure/                 # Implementacje infrastrukturalne
-│   │   └── Services/                   # Konkretne implementacje
-│   └── Application_/                   # Warstwa aplikacyjna
-│       └── Services/                   # Orkiestracja (DatasetGenerator)
+│   │   └── Services/                   # Konkretne implementacje (I/O, zewnętrzne)
+│   │       ├── WordDictionary.cs       # Implementacja IWordDictionary
+│   │       ├── LazyWordDictionary.cs   # Optymalizowana implementacja
+│   │       ├── XamlGenerator.cs        # Implementacja IXamlGenerator
+│   │       ├── CrossGridGenerator.cs   # Implementacja ICrossGridGenerator
+│   │       ├── DatasetExporter.cs      # Implementacja IDatasetExporter
+│   │       ├── DictionaryPathResolver.cs # Implementacja IDictionaryPathResolver
+│   │       ├── EmptyGridGenerator.cs   # Implementacja IEmptyGridGenerator
+│   │       ├── CursorLogger.cs         # Implementacja ICursorLogger
+│   │       └── ...
+│   │
+│   └── DependencyInjection.cs          # DI configuration
+│
+├── CrosswordAIGenerator.Core.Tests/    # Testy jednostkowe
+│   ├── Domain/
+│   │   ├── Models/
+│   │   └── Common/
+│   ├── Application/
+│   │   └── Services/
+│   └── Infrastructure/
+│       └── Services/
 │
 └── CrosswordAIGenerator.WPF/            # Warstwa prezentacji (WPF)
     ├── Presentation/                   # MVVM
     │   ├── Views/                      # XAML Views
     │   └── ViewModels/                # ViewModels
     └── Infrastructure/                 # WPF-specific services
+        └── ScreenshotService.cs
 ```
 
 ### Zasady architektury
 
 - **Core jest niezależny** - może być używany w innych UI (MAUI, Blazor, Console)
-- **Dependency Injection** - wszystkie zależności przez konstruktor
-- **Interfejsy w Domain** - implementacje w Infrastructure
+- **Dependency Injection** - wszystkie zależności przez konstruktor (Microsoft.Extensions.DependencyInjection)
+- **Interfejsy w Domain** - wszystkie interfejsy w `Domain/Services/`
+- **Implementacje** - w `Application_/Services/` (logika biznesowa) lub `Infrastructure/Services/` (I/O, zewnętrzne)
 - **SOLID Principles** - Single Responsibility, Dependency Inversion, etc.
-- **ROP (Result Pattern)** - brak wyjątków, spójna obsługa błędów
+- **ROP (Result Pattern)** - brak wyjątków, spójna obsługa błędów (`Result<TValue, TError>`)
+- **Clean Architecture** - warstwy: Domain (interfejsy, modele) → Application (use cases) → Infrastructure (implementacje)
+- **Testowalność** - wszystkie komponenty są testowalne przez interfejsy
 
 Szczegółowa dokumentacja architektury: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
@@ -303,21 +356,34 @@ Format logów: `[CURSOR] [timestamp] [LEVEL] message`
 
 ```
 CrosswordAIGenerator/
-├── CrosswordAIGenerator.Core/          # Biblioteka core
-│   ├── Domain/                         # Logika biznesowa
-│   ├── Infrastructure/                 # Implementacje
-│   ├── Application_/                   # Warstwa aplikacyjna
+├── CrosswordAIGenerator.Core/          # Biblioteka core (Clean Architecture)
+│   ├── Domain/                         # Logika biznesowa (interfejsy, modele)
+│   │   ├── Models/                     # Modele domenowe
+│   │   ├── Services/                   # Interfejsy serwisów
+│   │   └── Common/                     # Wspólne typy (Result, Constants)
+│   ├── Application_/                   # Warstwa aplikacyjna (use cases)
+│   │   └── Services/                   # Orkiestracja i logika biznesowa
+│   ├── Infrastructure/                 # Implementacje infrastrukturalne
+│   │   └── Services/                   # Konkretne implementacje
 │   └── DependencyInjection.cs         # DI configuration
+│
+├── CrosswordAIGenerator.Core.Tests/    # Testy jednostkowe
+│   ├── Domain/                         # Testy domeny
+│   ├── Application/                    # Testy aplikacji
+│   └── Infrastructure/                 # Testy infrastruktury
 │
 ├── CrosswordAIGenerator.WPF/           # Aplikacja WPF
 │   ├── Presentation/                   # MVVM
+│   │   ├── Views/                      # XAML Views
+│   │   └── ViewModels/                # ViewModels
 │   ├── Infrastructure/                 # WPF services
 │   └── App.xaml.cs                     # Entry point
 │
-├── dictionaries/                        # Słowniki (nie w repo)
-│   └── slowa.txt                      # Słownik polskich słów (wymagany)
+├── dictionaries/                        # Słowniki
+│   ├── slowa.txt                      # Słownik polskich słów (w repo)
+│   ├── README.md                       # Instrukcje słownika
+│   └── download_dictionary.ps1        # Skrypt pobierania
 │
-├── README.md                           # Ten plik - przegląd projektu
 ├── docs/                               # Dokumentacja projektu
 │   ├── ARCHITECTURE.md                 # Dokumentacja architektury
 │   ├── CONTRIBUTING.md                 # Jak współtworzyć
@@ -327,6 +393,13 @@ CrosswordAIGenerator/
 │   ├── API_DOCUMENTATION.md            # Dokumentacja API
 │   ├── CODE_REVIEW.md                  # Analiza jakości kodu
 │   └── CHANGELOG.md                    # Historia zmian
+│
+├── .github/
+│   └── workflows/
+│       └── ci.yml                      # GitHub Actions CI
+│
+├── README.md                           # Ten plik - przegląd projektu
+└── CrosswordAIGenerator.sln           # Solution file
 ```
 
 ## 🧪 Testowanie
