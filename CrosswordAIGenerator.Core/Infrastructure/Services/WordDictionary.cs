@@ -121,11 +121,15 @@ public class WordDictionary : IWordDictionary
     }
 
     /// <summary>
-    /// Tworzy słownik - próbuje załadować z pliku, jeśli nie istnieje używa domyślnego
+    /// Tworzy słownik z podanego pliku - używa tylko slowa.txt (przez IDictionaryPathResolver)
     /// </summary>
+    /// <remarks>
+    /// Ta metoda nie jest już używana w produkcji - aplikacja używa LazyWordDictionary przez DependencyInjection.
+    /// Pozostawiona dla kompatybilności wstecznej i testów.
+    /// </remarks>
     public static WordDictionary CreateDefault(int? seed = null, string? dictionaryPath = null)
     {
-        // Spróbuj załadować z pliku
+        // Spróbuj załadować z podanego pliku
         if (dictionaryPath != null && File.Exists(dictionaryPath))
         {
             try
@@ -134,39 +138,11 @@ public class WordDictionary : IWordDictionary
             }
             catch
             {
-                // Jeśli nie udało się, użyj domyślnego
+                // Jeśli nie udało się, użyj fallback
             }
         }
         
-        // Spróbuj załadować większy słownik words.polish.txt.gz (priorytet)
-        var gzPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "dictionaries", "words.polish.txt.gz");
-        if (File.Exists(gzPath))
-        {
-            try
-            {
-                return FromFile(gzPath, seed, minWordLength: 6);
-            }
-            catch
-            {
-                // Jeśli nie udało się, spróbuj innych
-            }
-        }
-        
-        // Spróbuj załadować domyślny plik słownika polish_words.txt
-        var defaultPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "dictionaries", "polish_words.txt");
-        if (File.Exists(defaultPath))
-        {
-            try
-            {
-                return FromFile(defaultPath, seed, minWordLength: 6);
-            }
-            catch
-            {
-                // Jeśli nie udało się, użyj domyślnego
-            }
-        }
-        
-        // Użyj wbudowanego małego słownika
+        // Użyj wbudowanego małego słownika (tylko dla testów)
         return CreateDefaultFallback(seed);
     }
     

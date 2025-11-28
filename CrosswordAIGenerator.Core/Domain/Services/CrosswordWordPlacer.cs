@@ -1,7 +1,9 @@
 using CrosswordAIGenerator.Core.Domain.Models;
 using CrosswordAIGenerator.Core.Domain.Common;
+using CrosswordAIGenerator.Core.Domain.Services;
+using CrosswordAIGenerator.Core.Infrastructure.Services;
 
-namespace CrosswordAIGenerator.Core.Domain.Services;
+namespace CrosswordAIGenerator.Core.Application.Services;
 
 /// <summary>
 /// Generator krzyżówek z rzeczywistymi słowami i przecięciami
@@ -56,9 +58,9 @@ public class CrosswordWordPlacer
     /// </summary>
     /// <param name="rows">Liczba wierszy</param>
     /// <param name="columns">Liczba kolumn</param>
-    /// <param name="targetWordCount">Docelowa liczba słów (4-6)</param>
+    /// <param name="targetWordCount">Docelowa liczba słów (4-6). UWAGA: Używane TYLKO gdy highlightedWord == null. Gdy jest hasło, liczba słów = długość hasła.</param>
     /// <param name="maxAttempts">Maksymalna liczba prób znalezienia słowa</param>
-    /// <param name="highlightedWord">Słowo do wyróżnienia (czerwone tło + numerki) - null jeśli brak</param>
+    /// <param name="highlightedWord">Słowo do wyróżnienia (czerwone tło + numerki) - null jeśli brak. Gdy podane, każda litera hasła = jedno słowo.</param>
     /// <returns>Result z tuple: (grid, placedWords, highlightedCellsWithIndices) lub błąd</returns>
     public Result<(CrosswordGrid grid, List<CrosswordWord> placedWords, Dictionary<(int row, int col), int> highlightedCellsWithIndices), string> GenerateWithWords(
         int rows, int columns, int targetWordCount = 5, int maxAttempts = 50, string? highlightedWord = null)
@@ -185,8 +187,8 @@ public class CrosswordWordPlacer
                     }
                 }
                 
-                // Priorytetyzuj słowa które zawierają więcej liter z hasła, ale z większą losowością
-                // Licz ile liter z hasła zawiera każde słowo
+                // Priorytetyzuj słowa które zawierają DOKŁADNIE JEDNĄ literę z hasła (optymalne)
+                // Jeśli nie ma takich, użyj słów z 2 literami, potem 3+, itd.
                 // WAŻNE: Każde słowo MUSI zawierać przynajmniej jedną literę z hasła
                 // Dodatkowo: unikaj słów zaczynających się od tego samego prefiksu (np. "nie...", "prze...")
                 var commonPrefixes = new[] { "NIE", "PRZE", "WY", "ZA", "OD", "NA", "PO", "DO", "RO", "PRZED", "POD", "NAD", "OB", "PRZY", "BEZ", "PRZEZ", "PRZECIW", "POMIĘDZY", "PONAD", "OBOK" };
@@ -195,7 +197,9 @@ public class CrosswordWordPlacer
                 var scoredCandidates = allCandidates.Select(word => new
                 {
                     Word = word,
-                    Score = word.Count(c => highlightedWordLetters.Contains(c)), // Ile liter z hasła
+                    HighlightedLetterCount = word.Count(c => highlightedWordLetters.Contains(c)), // Ile liter z hasła
+                    // Score: niższy = lepszy (1 litera = najlepszy score 0, 2 litery = score 1, itd.)
+                    Score = word.Count(c => highlightedWordLetters.Contains(c)) - 1, // 1 litera = 0, 2 litery = 1, 3 litery = 2, etc.
                     HasCommonPrefix = commonPrefixes.Any(p => word.StartsWith(p)),
                     UsesAlreadyUsedPrefix = commonPrefixes.Any(p => word.StartsWith(p) && usedPrefixes.Contains(p)), // Czy używa już użytego prefiksu
                     ContainsRequiredLetter = word.Contains(requiredLetter), // Zawiera wymaganą literę dla tej pozycji
@@ -203,7 +207,7 @@ public class CrosswordWordPlacer
                     RandomWeight = _random.NextDouble() // Dodaj losową wagę dla większej różnorodności
                 })
                 .Where(x => x.ContainsRequiredLetter && x.ContainsAnyHighlightedLetter) // MUSI zawierać wymaganą literę I przynajmniej jedną literę z hasła
-                .OrderByDescending(x => x.Score) // Najpierw słowa z większą liczbą liter z hasła
+                .OrderBy(x => x.Score) // Najpierw słowa z 1 literą z hasła (score 0), potem 2 (score 1), itd.
                 .ThenBy(x => x.UsesAlreadyUsedPrefix ? 1 : 0) // Preferuj słowa z nowymi prefiksami
                 .ThenByDescending(x => x.RandomWeight) // Potem losowo (używamy RandomWeight zamiast ThenBy z Next())
                 .ToList();
@@ -212,16 +216,16 @@ public class CrosswordWordPlacer
                 
                 if (scoredCandidates.Count > 0)
                 {
-                    // Użyj ważonego losowego wyboru - preferuj słowa z wyższym score, ale nie zawsze te same
-                    // Wybierz z top 30% najlepszych kandydatów (lub minimum 3, jeśli jest mniej)
-                    int topCount = Math.Max(3, (int)(scoredCandidates.Count * 0.3));
-                    var topCandidates = scoredCandidates.Take(topCount).ToList();
+                    // Użyj ważonego losowego wyboru - preferuj słowa z 1 literą z hasła (score 0)
+                    // Najpierw wybierz z najlepszych (score 0 = 1 litera z hasła)
+                    var bestScore = scoredCandidates[0].Score;
+                    var bestCandidates = scoredCandidates.Where(x => x.Score == bestScore).ToList();
                     
-                    // Jeśli wszystkie mają ten sam score, wybierz losowo z całej listy
-                    if (scoredCandidates.All(x => x.Score == scoredCandidates[0].Score))
-                    {
-                        topCandidates = scoredCandidates;
-                    }
+                    // Jeśli jest dużo najlepszych kandydatów (score 0), wybierz losowo z top 30%
+                    int topCount = Math.Max(3, (int)(bestCandidates.Count * 0.3));
+                    var topCandidates = bestCandidates.Count > topCount 
+                        ? bestCandidates.Take(topCount).ToList()
+                        : bestCandidates;
                     
                     var selectedWord = topCandidates[_random.Next(topCandidates.Count)].Word;
                     System.Diagnostics.Debug.WriteLine($"[CURSOR] GenerateWithWords: Wybrano słowo '{selectedWord}' dla litery '{requiredLetter}'");
@@ -324,16 +328,17 @@ public class CrosswordWordPlacer
                         
                         if (replacementCandidates.Count > 0)
                         {
-                            // Wybierz słowo które zawiera najwięcej liter z hasła
+                            // Wybierz słowo które zawiera brakującą literę, preferując słowa z 1 literą z hasła
                             var bestReplacement = replacementCandidates
                                 .Select(word => new
                                 {
                                     Word = word,
-                                    Score = word.Count(c => highlightedWordLetters.Contains(c)),
+                                    HighlightedLetterCount = word.Count(c => highlightedWordLetters.Contains(c)),
+                                    Score = word.Count(c => highlightedWordLetters.Contains(c)) - 1, // 1 litera = 0, 2 litery = 1, etc.
                                     LetterCount = word.Count(c => c == missingLetter) // Ile razy zawiera brakującą literę
                                 })
                                 .OrderByDescending(x => x.LetterCount) // Priorytet: słowa z większą liczbą brakujących liter
-                                .ThenByDescending(x => x.Score) // Potem: słowa z większą liczbą liter z hasła
+                                .ThenBy(x => x.Score) // Potem: preferuj słowa z 1 literą z hasła (score 0)
                                 .First();
                             
                             wordsForLetters[letterIndex] = bestReplacement.Word;
@@ -438,7 +443,7 @@ public class CrosswordWordPlacer
                 var candidates = GetWordsContaining(requiredLetter, minWordLength, maxWordLengthForFix, maxResults: 200)
                     .Where(w => w.Length <= maxWordLengthForFix)
                     .Where(w => w.Any(c => highlightedWordLetters.Contains(c))) // Zawiera przynajmniej jedną literę z hasła
-                    .OrderByDescending(w => w.Count(c => highlightedWordLetters.Contains(c))) // Priorytet: więcej liter z hasła
+                    .OrderBy(w => w.Count(c => highlightedWordLetters.Contains(c))) // Priorytet: 1 litera z hasła (najlepsze), potem 2, 3, etc.
                     .ToList();
                 
                 // FALLBACK: Jeśli nie znaleziono, użyj zamiennika
@@ -750,9 +755,9 @@ public class CrosswordWordPlacer
 
             if (candidates.Count > 0)
             {
-                // Wybierz słowo które zawiera najwięcej liter z hasła
+                // Wybierz słowo które zawiera 1 literę z hasła (optymalne), jeśli nie ma to 2, potem więcej
                 var bestWord = candidates
-                    .OrderByDescending(w => w.Count(c => highlightedWordLetters.Contains(c)))
+                    .OrderBy(w => w.Count(c => highlightedWordLetters.Contains(c))) // Preferuj 1 literę (najlepsze), potem 2, 3, etc.
                     .ThenBy(w => _random.Next()) // Losowość dla równych wyników
                     .First();
 
@@ -1264,20 +1269,19 @@ public class CrosswordWordPlacer
             return null;
         }
         
-        // Przetasuj kandydatów
-        var shuffledCandidates = candidates.OrderBy(x => _random.Next()).ToList();
+        // Przetasuj kandydatów i posortuj według liczby liter z hasła (preferuj 1 literę)
+        var sortedCandidates = candidates
+            .Select(word => new { Word = word, Score = word.Count(c => highlightedWordLetters.Contains(c)) })
+            .Where(x => x.Score >= 1 && x.Score <= 2) // Przynajmniej 1, maksymalnie 2 litery z hasła
+            .OrderBy(x => x.Score) // Preferuj 1 literę (score 1), potem 2 (score 2)
+            .ThenBy(x => _random.Next()) // Losowość dla równych wyników
+            .ToList();
         
-        // Spróbuj każdego kandydata
-        foreach (var word in shuffledCandidates)
+        // Spróbuj każdego kandydata (już posortowanego - najpierw z 1 literą)
+        foreach (var candidate in sortedCandidates)
         {
-            // Sprawdź ile liter hasła zawiera to słowo
-            int highlightedLetterCount = word.Count(c => highlightedWordLetters.Contains(c));
-            
-            // Warunek: przynajmniej 1 litera hasła, maksymalnie 2
-            if (highlightedLetterCount < 1 || highlightedLetterCount > 2)
-            {
-                continue; // Pomiń to słowo
-            }
+            var word = candidate.Word;
+            int highlightedLetterCount = candidate.Score;
             
             // Znajdź pozycję litery przecięcia w słowie
             int letterIndex = word.IndexOf(intersectLetter);
@@ -1786,27 +1790,36 @@ public class CrosswordWordPlacer
     private string FindFirstWordWithHighlightedConstraints(
         string highlightedWord, HashSet<char> highlightedWordLetters, int maxColumns, int minWordLength)
     {
-        // Spróbuj znaleźć słowo zawierające 1-2 litery hasła
-        var allWords = new List<string>();
+        // Spróbuj znaleźć słowo zawierające dokładnie 1 literę z hasła (optymalne)
+        var allWords = new List<(string word, int score)>();
         for (int i = 0; i < 200; i++) // Próbuj max 200 razy
         {
             var word = GetRandomWord();
             if (word.Length >= minWordLength && word.Length <= maxColumns)
             {
                 int highlightedCount = word.Count(c => highlightedWordLetters.Contains(c));
-                if (highlightedCount >= 1 && highlightedCount <= 2)
+                if (highlightedCount == 1) // Preferuj dokładnie 1 literę
                 {
                     return word;
                 }
-                allWords.Add(word);
+                if (highlightedCount >= 1 && highlightedCount <= 2) // Akceptuj też 2 litery
+                {
+                    allWords.Add((word, highlightedCount));
+                }
             }
         }
         
-        // Jeśli nie znalazło, użyj pierwszego słowa które zawiera przynajmniej jedną literę hasła
-        foreach (var word in allWords)
+        // Jeśli nie znalazło słowa z 1 literą, użyj słowa z 2 literami (posortowane po score)
+        var sortedWords = allWords.OrderBy(x => x.score).ToList(); // 1 litera przed 2 literami
+        if (sortedWords.Count > 0)
         {
-            int highlightedCount = word.Count(c => highlightedWordLetters.Contains(c));
-            if (highlightedCount >= 1)
+            return sortedWords[0].word;
+        }
+        
+        // Ostateczny fallback: użyj pierwszego słowa które zawiera przynajmniej jedną literę hasła
+        foreach (var (word, score) in allWords)
+        {
+            if (score >= 1)
             {
                 return word;
             }

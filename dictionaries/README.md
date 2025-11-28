@@ -1,17 +1,51 @@
-# Słowniki polskich słów
+# Słownik polskich słów
 
 W tym katalogu umieść plik tekstowy z polskimi słowami (jedno słowo na linię).
+
+## 🚀 Szybki start
+
+### Krok 1: Pobierz słownik
+
+**Automatycznie (PowerShell):**
+```powershell
+cd dictionaries
+.\download_dictionary.ps1
+```
+
+**Lub ręcznie:**
+1. Pobierz plik: https://raw.githubusercontent.com/michalburzynski/polish-words/master/slowa.txt
+2. Zapisz jako: `dictionaries/slowa.txt`
+
+### Krok 2: Sprawdź plik
+
+Upewnij się, że plik istnieje:
+```
+dictionaries/slowa.txt
+```
+
+### Krok 3: Uruchom aplikację
+
+Aplikacja automatycznie znajdzie i załaduje słownik z `dictionaries/slowa.txt`.
+
+**Gotowe!** 🎉
+
+---
+
+## 📋 Szczegóły
 
 ## Format pliku
 - Jedno słowo na linię
 - Kodowanie: UTF-8
-- Nazwa pliku: `polish_words.txt`
+- **Nazwa pliku: `slowa.txt`** (wymagane!)
+- Minimum: 6 liter na słowo
 - Przykład:
 ```
 SAMOCHÓD
 AUTOBUS
 POCIĄG
 KSIĄŻKA
+ŁÓDŹ
+ŚWIĘTY
 ...
 ```
 
@@ -19,51 +53,33 @@ KSIĄŻKA
 
 ### ⚠️ Ważne: Słownik z polskimi znakami
 
-**Obecny słownik `words.polish.txt.gz` NIE zawiera polskich znaków diakrytycznych** (Ą, Ć, Ę, Ł, Ń, Ó, Ś, Ź, Ż).
+Aplikacja **wymaga** pliku `slowa.txt` z polskimi znakami diakrytycznymi (Ą, Ć, Ę, Ł, Ń, Ó, Ś, Ź, Ż).
 
-Aplikacja używa **fallback** (Ł→L, Ą→A, etc.), więc działa, ale krzyżówki będą bardziej realistyczne z prawdziwym słownikiem.
-
-### Opcja 1: Ręczne pobranie (zalecane)
-
-1. **Polimorfologik** (najlepszy - zawiera polskie znaki):
-   - Pobierz z: https://github.com/morfologik/polimorfologik/releases
-   - Plik: `polimorfologik-2.1.txt` (lub nowszy)
-   - Format: `slowo +spacja+ tagi` - aplikacja automatycznie wyciągnie tylko słowa
-   - Zapisz jako: `polish_words.txt` w katalogu `dictionaries/`
-
-2. **Oficjalny Słownik Polskiego Scrabblisty (OSPS)**:
-   - Zawiera wszystkie polskie znaki
-   - Dostępny na stronie PZScrabble
-
-3. **Własny słownik**:
-   - Utwórz plik `polish_words.txt` w katalogu `dictionaries/`
-   - Format: jedno słowo na linię, UTF-8, min 6 liter
-   - Przykład:
-     ```
-     SAMOCHÓD
-     POCIĄG
-     KSIĄŻKA
-     ŁÓDŹ
-     ```
-
-### Opcja 2: Automatyczne pobranie (może nie działać)
+### Opcja 1: Automatyczne pobranie (zalecane)
 
 ```powershell
 cd dictionaries
 .\download_dictionary.ps1
 ```
 
-**Uwaga:** Skrypt próbuje pobrać z GitHub, ale źródła mogą być niedostępne (404). W takim przypadku pobierz ręcznie.
+Skrypt automatycznie pobierze słownik z GitHub i zapisze jako `slowa.txt`.
 
-### Opcja 3: Użyj obecnego słownika z fallback
+### Opcja 2: Ręczne pobranie
 
-Możesz używać `words.polish.txt.gz` - aplikacja automatycznie użyje fallback dla polskich znaków:
-- `Ł` → `L`
-- `Ą` → `A`
-- `Ć` → `C`
-- etc.
+1. **GitHub - polish-words** (zalecane):
+   - Pobierz z: https://raw.githubusercontent.com/michalburzynski/polish-words/master/slowa.txt
+   - Zapisz jako: `slowa.txt` w katalogu `dictionaries/`
 
-Krzyżówki będą działać, ale słowa mogą być mniej realistyczne.
+2. **Polimorfologik**:
+   - Pobierz z: https://github.com/morfologik/polimorfologik/releases
+   - Plik: `polimorfologik-2.1.txt` (lub nowszy)
+   - Format: `slowo +spacja+ tagi` - wyciągnij tylko pierwszą kolumnę (słowa)
+   - Zapisz jako: `slowa.txt` w katalogu `dictionaries/`
+
+3. **Oficjalny Słownik Polskiego Scrabblisty (OSPS)**:
+   - Zawiera wszystkie polskie znaki
+   - Dostępny na stronie PZScrabble
+   - Zapisz jako: `slowa.txt` w katalogu `dictionaries/`
 
 ## Jak użyć?
 
@@ -75,9 +91,9 @@ cd dictionaries
 
 ### Ręczne pobranie:
 1. Pobierz plik z polskimi słowami (jedno słowo na linię)
-2. Zapisz jako `polish_words.txt` w katalogu `dictionaries`
+2. **Zapisz jako `slowa.txt`** w katalogu `dictionaries/`
 3. Uruchom aplikację - automatycznie załaduje słownik z pliku
-4. Jeśli plik nie istnieje, używa domyślnego małego słownika
+4. **Uwaga:** Jeśli plik nie istnieje, aplikacja nie uruchomi się (wymagany plik)
 
 ## Uwagi
 

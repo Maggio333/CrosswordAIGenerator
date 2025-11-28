@@ -1,4 +1,6 @@
-namespace CrosswordAIGenerator.Core.Application_.Services;
+using CrosswordAIGenerator.Core.Domain.Services;
+
+namespace CrosswordAIGenerator.Core.Application.Services;
 
 /// <summary>
 /// Implementacja serwisu konfiguracji - zawiera wszystkie stałe i magic numbers

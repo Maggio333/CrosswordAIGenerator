@@ -1,7 +1,7 @@
 # Skrypt do pobrania polskiego slownika
 # Uruchom: .\download_dictionary.ps1
 
-$dictionaryPath = Join-Path $PSScriptRoot "polish_words.txt"
+$dictionaryPath = Join-Path $PSScriptRoot "slowa.txt"
 
 Write-Host "Pobieranie polskiego slownika..." -ForegroundColor Green
 

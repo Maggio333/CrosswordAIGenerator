@@ -2,7 +2,7 @@ using System;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CrosswordAIGenerator.Core.Infrastructure.Services;
+using CrosswordAIGenerator.Core.Domain.Services;
 using CrosswordAIGenerator.WPF.Presentation.Views;
 
 namespace CrosswordAIGenerator.WPF.Presentation.ViewModels;

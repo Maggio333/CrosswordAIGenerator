@@ -3,10 +3,57 @@
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![WPF](https://img.shields.io/badge/WPF-Windows-0078D4?logo=windows)](https://docs.microsoft.com/en-us/dotnet/desktop/wpf/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/YOUR_USERNAME/CrosswordAIGenerator/workflows/CI/badge.svg)](https://github.com/YOUR_USERNAME/CrosswordAIGenerator/actions)
 
 **Generator datasetów krzyżówek dla treningu AI (LoRA finetuning i RAG)**
 
 System do deterministycznego generowania krzyżówek z XAML, przeznaczony do tworzenia wysokiej jakości datasetów dla finetunowania modeli językowych (Bielik 4B) oraz dla RAG (Retrieval Augmented Generation) w ChatElioraSystem.
+
+## 🚀 Szybki start
+
+### Krok 1: Sklonuj i zbuduj
+
+```bash
+git clone <repository-url>
+cd CrosswordAIGenerator
+dotnet restore
+dotnet build
+```
+
+### Krok 2: Uruchom aplikację
+
+```bash
+cd CrosswordAIGenerator.WPF
+dotnet run
+```
+
+**Gotowe!** Słownik `dictionaries/slowa.txt` jest już w repozytorium, więc aplikacja uruchomi się od razu.
+
+### Krok 3: Wygeneruj pierwszą krzyżówkę
+
+1. **Zaznacz "Ze słowami"** (domyślnie włączone)
+2. **Opcjonalnie:** Wprowadź "Hasło główne" (np. "KOT") - jeśli puste, system wybierze losowe
+3. **Kliknij "Generuj Pojedynczy"**
+4. Zobacz wygenerowaną krzyżówkę w oknie!
+
+### Krok 4: Wygeneruj dataset
+
+1. Ustaw **liczbę przykładów** (np. 100)
+2. **Opcjonalnie:** Wprowadź "Hasło główne" (wszystkie krzyżówki będą miały to samo hasło)
+3. **Kliknij "Generuj Dataset"**
+4. Postęp jest wyświetlany w czasie rzeczywistym
+5. Po zakończeniu możesz:
+   - **Eksport JSON** - pełny dataset z wszystkimi polami
+   - **Eksport JSONL (Finetune)** - format gotowy do finetunowania
+
+### 💡 Wskazówki
+
+- **Hasło główne:** Jeśli podasz hasło, liczba słów = długość hasła (każda litera = jedno słowo)
+- **Bez hasła:** System wybierze losowe hasła dla każdej krzyżówki
+- **Własne słowa:** Użyj zakładki "Własne słowa" aby stworzyć krzyżówkę z własnymi słowami i definicjami
+- **CrossGrid Preview:** Menu "Narzędzia" → "Podgląd CrossGrid" - podgląd i walidacja formatu CrossGrid
+
+---
 
 ## 🎯 Cel projektu
 

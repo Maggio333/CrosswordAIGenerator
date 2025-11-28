@@ -6,8 +6,9 @@ using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CrosswordAIGenerator.Core.Application_.Services;
+using CrosswordAIGenerator.Core.Application.Services;
 using CrosswordAIGenerator.Core.Domain.Common;
+using CrosswordAIGenerator.Core.Domain.Models;
 using CrosswordAIGenerator.Core.Domain.Services;
 using CrosswordAIGenerator.Core.Infrastructure.Services;
 using CrosswordAIGenerator.WPF.Infrastructure;
@@ -100,10 +101,27 @@ public partial class MainWindowViewModel : BaseViewModel
     }
 
     [ObservableProperty]
-    private bool _generateWithWords = false;
+    private bool _generateWithWords = true; // Domyślnie generuj krzyżówki ze słowami
+
+    partial void OnGenerateWithWordsChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsTargetWordCountEnabled));
+    }
 
     [ObservableProperty]
     private string _highlightedWord = string.Empty;
+
+    partial void OnHighlightedWordChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsTargetWordCountEnabled));
+    }
+
+    /// <summary>
+    /// Określa czy pole "Słowa" (TargetWordCount) powinno być włączone.
+    /// Jest włączone tylko gdy GenerateWithWords == true i HighlightedWord jest puste.
+    /// Gdy jest hasło, targetWordCount jest ignorowane (liczba słów = długość hasła).
+    /// </summary>
+    public bool IsTargetWordCountEnabled => GenerateWithWords && string.IsNullOrWhiteSpace(HighlightedWord);
 
     [ObservableProperty]
     private ObservableCollection<DatasetEntry> _datasetEntries = new();
@@ -243,10 +261,12 @@ public partial class MainWindowViewModel : BaseViewModel
                     System.Diagnostics.Debug.WriteLine($"[CURSOR] MainWindowViewModel.GenerateSingleAsync: Hasło MA polskie znaki: '{highlightedWordToPass}'");
                 }
                 
+                // UWAGA: targetWordCount jest używane TYLKO gdy nie ma hasła
+                // Gdy jest hasło, liczba słów = długość hasła (każda litera hasła = jedno słowo)
                 var result = _datasetGenerator.GenerateWithWordsExample(
                     GridSizeRows,
                     GridSizeColumns,
-                    TargetWordCount,
+                    TargetWordCount, // Ignorowane gdy highlightedWord != null
                     null,
                     highlightedWordToPass);
                 
@@ -418,12 +438,14 @@ public partial class MainWindowViewModel : BaseViewModel
                     
                     // Jeśli użytkownik podał hasło, użyj go (wszystkie krzyżówki będą miały to samo hasło)
                     // Jeśli nie podał, każda krzyżówka dostanie losowe hasło
+                    // UWAGA: targetWordCount jest używane TYLKO gdy nie ma hasła (highlightedWord == null)
+                    // Gdy jest hasło, liczba słów = długość hasła (każda litera hasła = jedno słowo)
                     // Dodaj callback do raportowania postępu w czasie rzeczywistym
                     entries = _datasetGenerator.GenerateWithWordsDataset(
                         DatasetCount,
                         minSize: minSizeForWords,
                         maxSize: maxSizeForWords,
-                        targetWordCount: TargetWordCount, // Używane tylko gdy nie ma hasła
+                        targetWordCount: TargetWordCount, // Używane TYLKO gdy nie ma hasła - gdy jest hasło, jest ignorowane
                         highlightedWord: string.IsNullOrWhiteSpace(HighlightedWord) ? null : HighlightedWord,
                         onProgress: (current, total) =>
                         {
@@ -570,7 +592,7 @@ public partial class MainWindowViewModel : BaseViewModel
     }
 
     /// <summary>
-    /// Eksportuje dataset do CSV w formacie gotowym do finetunowania
+    /// Eksportuje dataset do JSONL (JSON Lines) w formacie gotowym do finetunowania
     /// </summary>
     [RelayCommand]
     private void ExportToFinetuneCsv()
@@ -599,7 +621,7 @@ public partial class MainWindowViewModel : BaseViewModel
 
             if (saveDialog.ShowDialog() == true)
             {
-                _datasetGenerator.ExportToFinetuneCsv(entriesWithCrossGrid, saveDialog.FileName);
+                _datasetGenerator.ExportToFinetuneJsonl(entriesWithCrossGrid, saveDialog.FileName);
                 StatusMessage = $"Zapisano do {saveDialog.FileName}";
                 MessageBox.Show($"Zapisano {entriesWithCrossGrid.Count} przykładów do pliku JSONL (gotowe do finetunowania).", "Sukces", MessageBoxButton.OK, MessageBoxImage.Information);
             }

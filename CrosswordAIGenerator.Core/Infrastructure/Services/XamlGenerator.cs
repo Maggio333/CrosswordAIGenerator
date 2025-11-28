@@ -8,7 +8,7 @@ namespace CrosswordAIGenerator.Core.Infrastructure.Services;
 /// <summary>
 /// Generator XAML dla krzyżówek - konwertuje CrosswordGrid do XAML string
 /// </summary>
-public class XamlGenerator : IXamlGenerator
+public class XamlGenerator : Domain.Services.IXamlGenerator
 {
     private readonly ICursorLogger? _logger;
 

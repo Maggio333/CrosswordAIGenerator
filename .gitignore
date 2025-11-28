@@ -171,11 +171,11 @@ FodyWeavers.xsd
 # Project-specific ignores
 
 # Dictionary files (large, not in repo)
-dictionaries/*.txt
 dictionaries/*.txt.gz
 dictionaries/*.gz
 !dictionaries/README.md
 !dictionaries/download_dictionary.ps1
+!dictionaries/slowa.txt  # Słownik jest w repo
 
 # Generated images
 images/
@@ -203,4 +203,10 @@ datasets/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Python virtual environments
+venv/
+env/
+ENV/
+.venv/
 

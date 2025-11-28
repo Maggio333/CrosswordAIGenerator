@@ -4,7 +4,8 @@ using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CrosswordAIGenerator.Core.Application_.Services;
+using CrosswordAIGenerator.Core.Application.Services;
+using CrosswordAIGenerator.Core.Domain.Models;
 using CrosswordAIGenerator.Core.Domain.Services;
 using CrosswordAIGenerator.Core.Infrastructure.Services;
 using CrosswordAIGenerator.WPF.Infrastructure;
@@ -91,10 +92,27 @@ public partial class DatasetGeneratorViewModel : BaseViewModel
     }
 
     [ObservableProperty]
-    private bool _generateWithWords = false;
+    private bool _generateWithWords = true; // Domyślnie generuj krzyżówki ze słowami
+
+    partial void OnGenerateWithWordsChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsTargetWordCountEnabled));
+    }
 
     [ObservableProperty]
     private string _highlightedWord = string.Empty;
+
+    partial void OnHighlightedWordChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsTargetWordCountEnabled));
+    }
+
+    /// <summary>
+    /// Określa czy pole "Słowa" (TargetWordCount) powinno być włączone.
+    /// Jest włączone tylko gdy GenerateWithWords == true i HighlightedWord jest puste.
+    /// Gdy jest hasło, targetWordCount jest ignorowane (liczba słów = długość hasła).
+    /// </summary>
+    public bool IsTargetWordCountEnabled => GenerateWithWords && string.IsNullOrWhiteSpace(HighlightedWord);
 
     [ObservableProperty]
     private ObservableCollection<DatasetEntry> _datasetEntries = new();
@@ -208,10 +226,12 @@ public partial class DatasetGeneratorViewModel : BaseViewModel
             DatasetEntry entry;
             if (GenerateWithWords)
             {
+                // UWAGA: targetWordCount jest używane TYLKO gdy nie ma hasła
+                // Gdy jest hasło, liczba słów = długość hasła (każda litera hasła = jedno słowo)
                 var result = _datasetGenerator.GenerateWithWordsExample(
                     GridSizeRows,
                     GridSizeColumns,
-                    TargetWordCount,
+                    TargetWordCount, // Ignorowane gdy highlightedWord != null
                     null,
                     string.IsNullOrWhiteSpace(HighlightedWord) ? null : HighlightedWord); // DatasetGeneratorViewModel nie ma dostępu do Settings - używa domyślnych
                 
@@ -382,11 +402,13 @@ public partial class DatasetGeneratorViewModel : BaseViewModel
                     
                     // Jeśli użytkownik podał hasło, użyj go (wszystkie krzyżówki będą miały to samo hasło)
                     // Jeśli nie podał, każda krzyżówka dostanie losowe hasło
+                    // UWAGA: targetWordCount jest używane TYLKO gdy nie ma hasła (highlightedWord == null)
+                    // Gdy jest hasło, liczba słów = długość hasła (każda litera hasła = jedno słowo)
                     entries = _datasetGenerator.GenerateWithWordsDataset(
                         DatasetCount,
                         minSize: minSizeForWords,
                         maxSize: maxSizeForWords,
-                        targetWordCount: TargetWordCount, // Używane tylko gdy nie ma hasła
+                        targetWordCount: TargetWordCount, // Używane TYLKO gdy nie ma hasła - gdy jest hasło, jest ignorowane
                         highlightedWord: string.IsNullOrWhiteSpace(HighlightedWord) ? null : HighlightedWord); // DatasetGeneratorViewModel nie ma dostępu do Settings - używa domyślnych
                 }
                 else

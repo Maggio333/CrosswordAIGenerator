@@ -43,9 +43,10 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Rozmiar siatki -->
-                <Label Grid.Row="0" Grid.Column="0" Content="Rozmiar:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+                <!-- Rozmiar siatki - UKRYTE (nie działa poprawnie, wrócimy do tego później) -->
+                <Label Grid.Row="0" Grid.Column="0" Content="Rozmiar:" VerticalAlignment="Center" Margin="0,0,5,0"
+                       Visibility="Collapsed"/>
+                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Visibility="Collapsed">
                     <TextBox Text="{Binding GridSizeRows, UpdateSourceTrigger=PropertyChanged}" 
                              Width="50" Margin="0,0,5,0" VerticalAlignment="Center"/>
                     <Label Content="x" VerticalAlignment="Center" Margin="0,0,5,0"/>
@@ -53,10 +54,24 @@
                              Width="50" VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <!-- Ściany -->
-                <Label Grid.Row="0" Grid.Column="2" Content="Ściany:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                <!-- Ściany (tylko dla pustych siatek) -->
+                <Label Grid.Row="0" Grid.Column="2" Content="Ściany:" VerticalAlignment="Center" Margin="10,0,5,0"
+                       ToolTip="Działa tylko dla pustych siatek (gdy 'Ze słowami' jest wyłączone)">
+                    <Label.Style>
+                        <Style TargetType="Label">
+                            <Setter Property="Foreground" Value="Black"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding GenerateWithWords}" Value="True">
+                                    <Setter Property="Foreground" Value="Gray"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Label.Style>
+                </Label>
                 <CheckBox Grid.Row="0" Grid.Column="3" IsChecked="{Binding HasWalls}" 
-                          Content="Tak" VerticalAlignment="Center"/>
+                          Content="Tak" VerticalAlignment="Center"
+                          IsEnabled="{Binding GenerateWithWords, Converter={StaticResource InverseBooleanConverter}}"
+                          ToolTip="Dodaj losowe ściany do pustej siatki (działa tylko gdy 'Ze słowami' jest wyłączone)"/>
 
                 <!-- Prawdopodobieństwo ściany -->
                 <Label Grid.Row="0" Grid.Column="4" Content="Prawdop.:" VerticalAlignment="Center" Margin="10,0,5,0"/>
@@ -68,10 +83,12 @@
                 <CheckBox Grid.Row="0" Grid.Column="7" IsChecked="{Binding GenerateWithWords}" 
                           Content="Ze słowami" VerticalAlignment="Center"/>
                 
-                <!-- Liczba słów (tylko gdy ze słowami) -->
-                <Label Grid.Row="1" Grid.Column="6" Content="Słowa:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                <!-- Liczba słów - UKRYTE (nie działa poprawnie, wrócimy do tego później) -->
+                <Label Grid.Row="1" Grid.Column="6" Content="Słowa:" VerticalAlignment="Center" Margin="10,0,5,0"
+                       Visibility="Collapsed"/>
                 <TextBox Grid.Row="1" Grid.Column="7" Text="{Binding TargetWordCount, UpdateSourceTrigger=PropertyChanged}" 
-                         Width="60" VerticalAlignment="Center" IsEnabled="{Binding GenerateWithWords}"/>
+                         Width="60" VerticalAlignment="Center" 
+                         Visibility="Collapsed"/>
                 
                 <!-- Hasło główne (czerwona ramka) -->
                 <Label Grid.Row="2" Grid.Column="6" Content="Hasło:" VerticalAlignment="Center" Margin="10,5,5,0"/>

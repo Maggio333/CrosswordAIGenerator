@@ -1,5 +1,5 @@
 ﻿using System.Windows;
-using CrosswordAIGenerator.Core.Application_.Services;
+using CrosswordAIGenerator.Core.Application.Services;
 using CrosswordAIGenerator.WPF.Presentation.ViewModels;
 using CrosswordAIGenerator.WPF.Presentation.Views;
 using Microsoft.Extensions.DependencyInjection;

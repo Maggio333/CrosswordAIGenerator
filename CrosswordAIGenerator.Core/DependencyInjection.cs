@@ -1,4 +1,4 @@
-using CrosswordAIGenerator.Core.Application_.Services;
+using CrosswordAIGenerator.Core.Application.Services;
 using CrosswordAIGenerator.Core.Domain.Services;
 using CrosswordAIGenerator.Core.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,11 +47,19 @@ public static class DependencyInjection
             return new HighlightedWordGenerator(wordDictionary, seed: null, logger);
         });
 
+        // IDictionaryPathResolver - serwis do znajdowania ścieżki słownika
+        services.AddSingleton<IDictionaryPathResolver>(serviceProvider =>
+        {
+            var logger = serviceProvider.GetService<ICursorLogger>();
+            return new Infrastructure.Services.DictionaryPathResolver(logger);
+        });
+
         // IWordDictionary - factory pattern (tylko slowa.txt)
         services.AddSingleton<IWordDictionary>(serviceProvider =>
         {
             var logger = serviceProvider.GetService<ICursorLogger>();
-            var dictionaryPath = Application_.Services.DatasetGenerator.FindDictionaryFile();
+            var pathResolver = serviceProvider.GetRequiredService<IDictionaryPathResolver>();
+            var dictionaryPath = pathResolver.FindDictionaryFile();
             if (dictionaryPath != null)
             {
                 // Użyj lazy dictionary - nie ładuje całego pliku do pamięci
@@ -67,17 +75,74 @@ public static class DependencyInjection
             }
         });
 
-        // DatasetGenerator - factory pattern (używa IWordDictionary z DI)
-        services.AddSingleton<DatasetGenerator>(serviceProvider =>
+        // Random - singleton dla spójności seedów (opcjonalnie można użyć factory z seed)
+        services.AddSingleton<Random>(serviceProvider => new Random());
+
+        // DatasetDescriptionGenerator - generator opisów, searchable text i embedding text
+        services.AddSingleton<IDatasetDescriptionGenerator>(serviceProvider =>
+        {
+            return new Application.Services.DatasetDescriptionGenerator();
+        });
+
+        // DatasetPromptGenerator - generator promptów do finetunowania
+        services.AddSingleton<IDatasetPromptGenerator>(serviceProvider =>
+        {
+            return new Application.Services.DatasetPromptGenerator();
+        });
+
+        // DatasetExporter - eksporter datasetów do plików (Infrastructure - operacje I/O)
+        services.AddSingleton<IDatasetExporter>(serviceProvider =>
+        {
+            var promptGenerator = serviceProvider.GetRequiredService<IDatasetPromptGenerator>();
+            return new Infrastructure.Services.DatasetExporter(promptGenerator);
+        });
+
+        // EmptyGridDatasetGenerator - generator datasetów z pustymi siatkami
+        services.AddSingleton<IEmptyGridDatasetGenerator>(serviceProvider =>
         {
             var gridGenerator = serviceProvider.GetRequiredService<IEmptyGridGenerator>();
             var xamlGenerator = serviceProvider.GetRequiredService<IXamlGenerator>();
-            var crossGridGenerator = serviceProvider.GetService<ICrossGridGenerator>();
+            var descriptionGenerator = serviceProvider.GetRequiredService<IDatasetDescriptionGenerator>();
+            var random = serviceProvider.GetRequiredService<Random>();
+            return new Application.Services.EmptyGridDatasetGenerator(gridGenerator, xamlGenerator, descriptionGenerator, random);
+        });
+
+        // WordsDatasetGenerator - generator datasetów z krzyżówkami ze słowami
+        services.AddSingleton<IWordsDatasetGenerator>(serviceProvider =>
+        {
             var wordDictionary = serviceProvider.GetRequiredService<IWordDictionary>();
-            var wordGenerator = serviceProvider.GetService<IHighlightedWordGenerator>();
             var logger = serviceProvider.GetService<ICursorLogger>();
-            var wordPlacer = new Domain.Services.CrosswordWordPlacer(wordDictionary, seed: null, logger);
-            return new DatasetGenerator(gridGenerator, xamlGenerator, wordDictionary, wordPlacer, wordGenerator, logger, crossGridGenerator);
+            var wordPlacer = new Application.Services.CrosswordWordPlacer(wordDictionary, seed: null, logger);
+            var xamlGenerator = serviceProvider.GetRequiredService<IXamlGenerator>();
+            var descriptionGenerator = serviceProvider.GetRequiredService<IDatasetDescriptionGenerator>();
+            var crossGridGenerator = serviceProvider.GetService<ICrossGridGenerator>();
+            var wordGenerator = serviceProvider.GetService<IHighlightedWordGenerator>();
+            var random = serviceProvider.GetRequiredService<Random>();
+            return new Application.Services.WordsDatasetGenerator(wordPlacer, xamlGenerator, descriptionGenerator, crossGridGenerator, wordGenerator, logger, random);
+        });
+
+        // CustomWordsDatasetGenerator - generator datasetów z krzyżówkami z własnymi słowami
+        services.AddSingleton<ICustomWordsDatasetGenerator>(serviceProvider =>
+        {
+            var wordDictionary = serviceProvider.GetRequiredService<IWordDictionary>();
+            var logger = serviceProvider.GetService<ICursorLogger>();
+            var wordPlacer = new Application.Services.CrosswordWordPlacer(wordDictionary, seed: null, logger);
+            var xamlGenerator = serviceProvider.GetRequiredService<IXamlGenerator>();
+            var descriptionGenerator = serviceProvider.GetRequiredService<IDatasetDescriptionGenerator>();
+            var crossGridGenerator = serviceProvider.GetService<ICrossGridGenerator>();
+            var random = serviceProvider.GetRequiredService<Random>();
+            return new Application.Services.CustomWordsDatasetGenerator(wordPlacer, xamlGenerator, descriptionGenerator, crossGridGenerator, logger, random);
+        });
+
+        // DatasetGenerator - orchestrator który deleguje do specjalistycznych serwisów
+        services.AddSingleton<DatasetGenerator>(serviceProvider =>
+        {
+            var emptyGridGenerator = serviceProvider.GetRequiredService<IEmptyGridDatasetGenerator>();
+            var wordsGenerator = serviceProvider.GetRequiredService<IWordsDatasetGenerator>();
+            var customWordsGenerator = serviceProvider.GetRequiredService<ICustomWordsDatasetGenerator>();
+            var exporter = serviceProvider.GetRequiredService<IDatasetExporter>();
+            var crossGridGenerator = serviceProvider.GetService<ICrossGridGenerator>();
+            return new DatasetGenerator(emptyGridGenerator, wordsGenerator, customWordsGenerator, exporter, crossGridGenerator);
         });
 
         return services;

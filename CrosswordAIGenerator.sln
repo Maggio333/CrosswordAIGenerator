@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrosswordAIGenerator.Core",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrosswordAIGenerator.WPF", "CrosswordAIGenerator.WPF\CrosswordAIGenerator.WPF.csproj", "{CE590F54-474F-4FE6-B80A-514935A393A6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrosswordAIGenerator.Core.Tests", "CrosswordAIGenerator.Core.Tests\CrosswordAIGenerator.Core.Tests.csproj", "{F1A2B3C4-D5E6-F7A8-B9C0-D1E2F3A4B5C6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +43,18 @@ Global
 		{CE590F54-474F-4FE6-B80A-514935A393A6}.Release|x64.Build.0 = Release|Any CPU
 		{CE590F54-474F-4FE6-B80A-514935A393A6}.Release|x86.ActiveCfg = Release|Any CPU
 		{CE590F54-474F-4FE6-B80A-514935A393A6}.Release|x86.Build.0 = Release|Any CPU
+		{F1A2B3C4-D5E6-F7A8-B9C0-D1E2F3A4B5C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1A2B3C4-D5E6-F7A8-B9C0-D1E2F3A4B5C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1A2B3C4-D5E6-F7A8-B9C0-D1E2F3A4B5C6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F1A2B3C4-D5E6-F7A8-B9C0-D1E2F3A4B5C6}.Debug|x64.Build.0 = Debug|Any CPU
+		{F1A2B3C4-D5E6-F7A8-B9C0-D1E2F3A4B5C6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F1A2B3C4-D5E6-F7A8-B9C0-D1E2F3A4B5C6}.Debug|x86.Build.0 = Debug|Any CPU
+		{F1A2B3C4-D5E6-F7A8-B9C0-D1E2F3A4B5C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1A2B3C4-D5E6-F7A8-B9C0-D1E2F3A4B5C6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F1A2B3C4-D5E6-F7A8-B9C0-D1E2F3A4B5C6}.Release|x64.ActiveCfg = Release|Any CPU
+		{F1A2B3C4-D5E6-F7A8-B9C0-D1E2F3A4B5C6}.Release|x64.Build.0 = Release|Any CPU
+		{F1A2B3C4-D5E6-F7A8-B9C0-D1E2F3A4B5C6}.Release|x86.ActiveCfg = Release|Any CPU
+		{F1A2B3C4-D5E6-F7A8-B9C0-D1E2F3A4B5C6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

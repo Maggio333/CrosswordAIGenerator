@@ -13,7 +13,7 @@ namespace CrosswordAIGenerator.Core.Infrastructure.Services;
 /// Generator formatu CrossGrid - prosty tekstowy format ASCII art dla LLM
 /// Format: # GRID\nR0: ....[1]P..H.......R..\nR1: ....[2]O..I.P.....O..\n...
 /// </summary>
-public class CrossGridGenerator : ICrossGridGenerator
+public class CrossGridGenerator : Domain.Services.ICrossGridGenerator
 {
     private readonly ICursorLogger? _logger;
 
@@ -313,7 +313,7 @@ public class CrossGridGenerator : ICrossGridGenerator
     /// <summary>
     /// Konwertuje CrossGrid do XAML (dla walidacji)
     /// </summary>
-    public string CrossGridToXaml(string crossGridText, IXamlGenerator xamlGenerator)
+    public string CrossGridToXaml(string crossGridText, Domain.Services.IXamlGenerator xamlGenerator)
     {
         if (string.IsNullOrWhiteSpace(crossGridText))
         {

@@ -5,7 +5,7 @@ using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CrosswordAIGenerator.Core.Application_.Services;
+using CrosswordAIGenerator.Core.Application.Services;
 using CrosswordAIGenerator.Core.Domain.Common;
 using CrosswordAIGenerator.Core.Domain.Models;
 using CrosswordAIGenerator.Core.Domain.Services;

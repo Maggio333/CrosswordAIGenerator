@@ -342,8 +342,8 @@ Po wygenerowaniu datasetu:
 2. Sprawdź czy plik ma kodowanie UTF-8
 3. Sprawdź logi w `logs/cursor_YYYY-MM-DD.log`
 
-**Alternatywa:**
-- Użyj `words.polish.txt.gz` (fallback, ale bez polskich znaków)
+**Uwaga:**
+- Aplikacja wymaga pliku `slowa.txt` - jeśli nie istnieje, aplikacja nie uruchomi się
 
 ### Problem: "Bardzo wolne generowanie"
 
