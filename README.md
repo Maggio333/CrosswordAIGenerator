@@ -3,11 +3,11 @@
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![WPF](https://img.shields.io/badge/WPF-Windows-0078D4?logo=windows)](https://docs.microsoft.com/en-us/dotnet/desktop/wpf/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![CI](https://github.com/YOUR_USERNAME/CrosswordAIGenerator/workflows/CI/badge.svg)](https://github.com/YOUR_USERNAME/CrosswordAIGenerator/actions)
+[![CI](https://github.com/Maggio333/CrosswordAIGenerator/actions/workflows/ci.yml/badge.svg)](https://github.com/Maggio333/CrosswordAIGenerator/actions)
 
 **Generator datasetów krzyżówek dla treningu AI (LoRA finetuning i RAG)**
 
-System do deterministycznego generowania krzyżówek z XAML, przeznaczony do tworzenia wysokiej jakości datasetów dla finetunowania modeli językowych (Bielik 4B) oraz dla RAG (Retrieval Augmented Generation) w ChatElioraSystem.
+System do deterministycznego generowania krzyżówek z XAML, przeznaczony do tworzenia wysokiej jakości datasetów dla finetunowania modeli językowych (Bielik 4B) oraz dla RAG (Retrieval Augmented Generation).
 
 ## 🚀 Szybki start
 
@@ -90,12 +90,14 @@ Stworzenie nieograniczonego datasetu krzyżówek poprzez:
 - **MVVM Architecture** - czysta architektura z Dependency Injection
 - **Railway Oriented Programming** - spójna obsługa błędów (Result pattern)
 - **Logging** - szczegółowe logi dla debugowania (CursorLogger)
+- **Unit Tests** - kompleksowe testy jednostkowe (xUnit, Moq, FluentAssertions)
+- **CI/CD** - automatyczne buildy i testy (GitHub Actions)
 
 ### 🚧 Planowane
 
 - **DSL Format** - pośredni format tekstowy dla LLM (zobacz [docs/PLAN_PRZYSZŁOŚĆ.md](docs/PLAN_PRZYSZŁOŚĆ.md))
 - **Integracja z LLM** - generowanie XAML przez model językowy
-- **Eksport do Qdrant** - integracja z ChatElioraSystem
+- **Eksport do Qdrant** - integracja z systemami RAG (opcjonalnie)
 - **LoRA Dataset Exporter** - format dla finetunowania
 
 ## 🏗️ Architektura
@@ -136,6 +138,7 @@ Szczegółowa dokumentacja architektury: [docs/ARCHITECTURE.md](docs/ARCHITECTUR
 - **.NET 8.0 SDK** lub nowszy
 - **Windows** (WPF wymaga Windows)
 - **Visual Studio 2022** lub **VS Code** z C# extension (opcjonalnie)
+- **Słownik polskich słów** - `dictionaries/slowa.txt` (zawarty w repozytorium)
 
 ## 🚀 Instalacja
 
@@ -146,17 +149,13 @@ git clone <repository-url>
 cd CrosswordAIGenerator
 ```
 
-### 2. Przygotuj słownik
+### 2. Słownik (opcjonalnie)
 
-Słownik jest **wymagany** do generowania krzyżówek ze słowami:
+**Słownik jest już zawarty w repozytorium** (`dictionaries/slowa.txt`), więc nie musisz go pobierać osobno.
 
-```bash
-# Utwórz katalog dictionaries w głównym katalogu projektu
-mkdir dictionaries
-
-# Umieść plik slowa.txt w katalogu dictionaries/
-# Format: jedno słowo na linię, UTF-8, minimum 6 liter
-```
+Jeśli chcesz zaktualizować słownik:
+- Zobacz [dictionaries/README.md](dictionaries/README.md) dla instrukcji pobierania
+- Użyj skryptu `dictionaries/download_dictionary.ps1`
 
 **Wymagany plik:**
 - `dictionaries/slowa.txt` - **jedyny obsługiwany słownik**
@@ -164,8 +163,6 @@ mkdir dictionaries
   - Kodowanie: UTF-8
   - Minimum: 6 liter na słowo
   - Obsługuje polskie znaki (Ą, Ć, Ę, Ł, Ń, Ó, Ś, Ź, Ż)
-
-**Uwaga:** Aplikacja używa **tylko** `slowa.txt`. Inne pliki (`polish_words.txt`, `words.polish.txt.gz`) nie są obsługiwane.
 
 ### 3. Zbuduj projekt
 
@@ -334,6 +331,28 @@ CrosswordAIGenerator/
 
 ## 🧪 Testowanie
 
+### Testy jednostkowe
+
+Projekt zawiera kompleksowe testy jednostkowe w projekcie `CrosswordAIGenerator.Core.Tests`:
+
+```bash
+dotnet test
+```
+
+**Pokrycie testami:**
+- ✅ `CrosswordGrid` - testy siatki krzyżówki
+- ✅ `CrosswordWord` - testy słów w krzyżówce
+- ✅ `Result<T, TError>` - testy Railway Oriented Programming
+- ✅ `WordIntersectionFinder` - testy znajdowania przecięć
+- ✅ `EmptyGridGenerator` - testy generowania pustych siatek
+- ✅ `DictionaryPathResolver` - testy rozwiązywania ścieżek słownika
+- ✅ `Constants` - testy stałych
+
+**Frameworki testowe:**
+- **xUnit** - framework testowy
+- **Moq** - mockowanie zależności
+- **FluentAssertions** - czytelne asercje
+
 ### Testy manualne
 
 1. **Generowanie pustej siatki:**
@@ -408,6 +427,9 @@ Wszystkie dokumenty znajdują się w katalogu [`docs/`](docs/):
 - [x] CrossGrid Format (prosty format ASCII art dla LLM)
 - [x] CrossGrid Preview (okno podglądu i walidacji)
 - [x] Ustawienia datasetów (kontrola eksportu)
+- [x] Unit Tests (xUnit, Moq, FluentAssertions)
+- [x] CI/CD (GitHub Actions)
+- [x] Clean Architecture refactoring
 
 ### MVP 2 🚧 (W trakcie)
 - [x] CrossGrid Format (pośredni format dla LLM) ✅
@@ -417,7 +439,7 @@ Wszystkie dokumenty znajdują się w katalogu [`docs/`](docs/):
 - [ ] Integracja z LLM (generowanie CrossGrid przez model)
 
 ### MVP 3 🚧 (Planowane)
-- [ ] Eksport do Qdrant (integracja z ChatElioraSystem)
+- [ ] Eksport do Qdrant (integracja z systemami RAG)
 - [ ] RAG testing
 - [ ] Finetuning workflow (automatyzacja)
 
@@ -429,8 +451,9 @@ Ten projekt jest licencjonowany na licencji MIT - zobacz plik [LICENSE](LICENSE)
 
 ## 🙏 Podziękowania
 
-- **ChatElioraSystem** - inspiracja architekturą i podejściem do RAG
 - **CommunityToolkit.Mvvm** - świetna biblioteka dla MVVM w .NET
+- **xUnit, Moq, FluentAssertions** - narzędzia do testowania
+- **Microsoft.Extensions.DependencyInjection** - Dependency Injection framework
 
 ## 📧 Kontakt
 
