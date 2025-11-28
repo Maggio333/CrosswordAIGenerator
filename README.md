@@ -173,6 +173,79 @@ CrosswordAIGenerator/
         └── ScreenshotService.cs
 ```
 
+### Przepływ danych
+
+#### Generowanie pojedynczej krzyżówki
+
+```mermaid
+graph TD
+    A[Użytkownik: Klik 'Generuj Pojedynczy'] --> B[MainWindowViewModel]
+    B --> C{DatasetGenerator}
+    C -->|Ze słowami| D[WordsDatasetGenerator]
+    C -->|Pusta siatka| E[EmptyGridDatasetGenerator]
+    C -->|Własne słowa| F[CustomWordsDatasetGenerator]
+    
+    D --> G[CrosswordWordPlacer]
+    G --> H[IWordDictionary]
+    H --> I[WordDictionary/LazyWordDictionary]
+    
+    D --> J[IXamlGenerator]
+    E --> J
+    F --> J
+    J --> K[XamlGenerator]
+    
+    D --> L[ICrossGridGenerator]
+    E --> L
+    F --> L
+    L --> M[CrossGridGenerator]
+    
+    D --> N[IDatasetDescriptionGenerator]
+    E --> N
+    F --> N
+    N --> O[DatasetDescriptionGenerator]
+    
+    C --> P[DatasetEntry]
+    P --> Q[MainWindowViewModel]
+    Q --> R[CrosswordView - Render XAML]
+    Q --> S[ScreenshotService - Zapisz JPG]
+```
+
+#### Generowanie datasetu
+
+```mermaid
+graph TD
+    A[Użytkownik: Ustaw parametry + Klik 'Generuj Dataset'] --> B[MainWindowViewModel]
+    B --> C[DatasetGenerator.GenerateWithWordsDataset]
+    C --> D[WordsDatasetGenerator]
+    D --> E[Loop: Generuj N przykładów]
+    E --> F[CrosswordWordPlacer]
+    F --> G[IXamlGenerator]
+    F --> H[ICrossGridGenerator]
+    F --> I[IDatasetDescriptionGenerator]
+    E --> J[Callback: onProgress]
+    J --> K[UI: Aktualizuj StatusMessage]
+    E --> L[List DatasetEntry]
+    L --> M[DatasetGenerator]
+    M --> N[Eksport JSON/JSONL]
+    N --> O[IDatasetExporter]
+    O --> P[DatasetExporter - Zapisz do pliku]
+```
+
+#### Eksport datasetu
+
+```mermaid
+graph TD
+    A[Użytkownik: Klik 'Eksport JSONL'] --> B[MainWindowViewModel]
+    B --> C[DatasetGenerator]
+    C --> D[IDatasetExporter]
+    D --> E[DatasetExporter]
+    E --> F[IDatasetPromptGenerator]
+    F --> G[DatasetPromptGenerator]
+    G --> H[Generuj prompt/response]
+    E --> I[Zapisz JSONL do pliku]
+    I --> J[Plik gotowy do finetunowania]
+```
+
 ### Zasady architektury
 
 - **Core jest niezależny** - może być używany w innych UI (MAUI, Blazor, Console)
