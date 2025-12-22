@@ -2,9 +2,12 @@ using System.Text.Json;
 using System.IO;
 using System.Linq;
 using CrosswordAIGenerator.Core.Domain.Models;
+using CrosswordAIGenerator.Core.Domain.Models.RL;
 using CrosswordAIGenerator.Core.Domain.Services;
+using CrosswordAIGenerator.Core.Domain.Services.RL;
 using CrosswordAIGenerator.Core.Domain.Common;
 using CrosswordAIGenerator.Core.Infrastructure.Services;
+using CrosswordAIGenerator.Core.Application.Services.RL;
 
 namespace CrosswordAIGenerator.Core.Application.Services;
 
@@ -18,6 +21,7 @@ public class DatasetGenerator
     private readonly ICustomWordsDatasetGenerator _customWordsGenerator;
     private readonly IDatasetExporter _exporter;
     private readonly ICrossGridGenerator? _crossGridGenerator;
+    private readonly ICrosswordRLDatasetGenerator? _rlDatasetGenerator;
 
     /// <summary>
     /// Waliduje wszystkie CrossGrid w datasetach
@@ -51,13 +55,15 @@ public class DatasetGenerator
         IWordsDatasetGenerator wordsGenerator,
         ICustomWordsDatasetGenerator customWordsGenerator,
         IDatasetExporter exporter,
-        ICrossGridGenerator? crossGridGenerator = null)
+        ICrossGridGenerator? crossGridGenerator = null,
+        ICrosswordRLDatasetGenerator? rlDatasetGenerator = null)
     {
         _emptyGridGenerator = emptyGridGenerator ?? throw new ArgumentNullException(nameof(emptyGridGenerator));
         _wordsGenerator = wordsGenerator ?? throw new ArgumentNullException(nameof(wordsGenerator));
         _customWordsGenerator = customWordsGenerator ?? throw new ArgumentNullException(nameof(customWordsGenerator));
         _exporter = exporter ?? throw new ArgumentNullException(nameof(exporter));
         _crossGridGenerator = crossGridGenerator;
+        _rlDatasetGenerator = rlDatasetGenerator;
     }
 
     /// <summary>
@@ -142,6 +148,95 @@ public class DatasetGenerator
     public void ExportToFinetuneJsonl(List<DatasetEntry> entries, string filePath)
     {
         _exporter.ExportToFinetuneJsonl(entries, filePath);
+    }
+
+    /// <summary>
+    /// Generuje dataset RL (Reinforcement Learning) - pary (stan, akcja, nagroda) z gier self-play
+    /// </summary>
+    public List<CrosswordRLDatasetEntry> GenerateRLDataset(
+        int entryCount,
+        int rows = 15,
+        int columns = 15,
+        int wordCount = 5,
+        SelfPlayStrategy strategy = SelfPlayStrategy.Random)
+    {
+        if (_rlDatasetGenerator == null)
+        {
+            throw new InvalidOperationException("RL Dataset Generator is not configured. Please register ICrosswordRLDatasetGenerator in dependency injection.");
+        }
+        
+        return _rlDatasetGenerator.GenerateDataset(entryCount, rows, columns, wordCount, strategy);
+    }
+
+    /// <summary>
+    /// Eksportuje dataset RL do JSONL w formacie gotowym do treningu PPO
+    /// </summary>
+    public void ExportRLDatasetToJsonl(List<CrosswordRLDatasetEntry> entries, string filePath)
+    {
+        if (_rlDatasetGenerator == null)
+        {
+            throw new InvalidOperationException("RL Dataset Generator is not configured. Please register ICrosswordRLDatasetGenerator in dependency injection.");
+        }
+        
+        _rlDatasetGenerator.ExportToJsonl(entries, filePath);
+    }
+    
+    /// <summary>
+    /// Konwertuje RL dataset na format supervised (prompt/response) dla Behavior Cloning
+    /// </summary>
+    public List<SupervisedDatasetEntry> ConvertRLToSupervisedFormat(List<CrosswordRLDatasetEntry> rlEntries)
+    {
+        if (_rlDatasetGenerator == null)
+        {
+            throw new InvalidOperationException("RL Dataset Generator is not configured.");
+        }
+        
+        return _rlDatasetGenerator.ConvertToSupervisedFormat(rlEntries);
+    }
+    
+    /// <summary>
+    /// Pobiera ważone próbki z RL datasetu (oversample przykładów z wyższym reward)
+    /// </summary>
+    public List<CrosswordRLDatasetEntry> GetWeightedRLSamples(
+        List<CrosswordRLDatasetEntry> entries,
+        int count,
+        double minReward = 0.0)
+    {
+        if (_rlDatasetGenerator == null)
+        {
+            throw new InvalidOperationException("RL Dataset Generator is not configured.");
+        }
+        
+        return _rlDatasetGenerator.GetWeightedSamples(entries, count, minReward);
+    }
+    
+    /// <summary>
+    /// Eksportuje dataset do formatu gotowego do treningu (supervised lub RL)
+    /// </summary>
+    public void ExportRLForTraining(
+        List<CrosswordRLDatasetEntry> entries,
+        string filePath,
+        bool supervisedFormat = false)
+    {
+        if (_rlDatasetGenerator == null)
+        {
+            throw new InvalidOperationException("RL Dataset Generator is not configured.");
+        }
+        
+        _rlDatasetGenerator.ExportForTraining(entries, filePath, supervisedFormat);
+    }
+    
+    /// <summary>
+    /// Oblicza statystyki RL datasetu
+    /// </summary>
+    public DatasetStatistics GetRLDatasetStatistics(List<CrosswordRLDatasetEntry> entries)
+    {
+        if (_rlDatasetGenerator == null)
+        {
+            throw new InvalidOperationException("RL Dataset Generator is not configured.");
+        }
+        
+        return _rlDatasetGenerator.GetStatistics(entries);
     }
 }
 

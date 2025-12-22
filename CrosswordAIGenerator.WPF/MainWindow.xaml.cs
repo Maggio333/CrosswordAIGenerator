@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using CrosswordAIGenerator.Core.Application.Services;
 using CrosswordAIGenerator.WPF.Presentation.ViewModels;
 using CrosswordAIGenerator.WPF.Presentation.Views;
@@ -95,5 +95,32 @@ namespace CrosswordAIGenerator.WPF;
     {
         var previewWindow = _serviceProvider.GetRequiredService<CrosswordAIGenerator.WPF.Presentation.Views.CrossGridPreviewWindow>();
         previewWindow.Show();
+    }
+
+    private void OpenRLGenerator_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var rlViewModel = _serviceProvider.GetRequiredService<RLDatasetGeneratorViewModel>();
+            var rlWindow = _serviceProvider.GetRequiredService<RLDatasetGeneratorWindow>();
+            rlWindow.Show();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Błąd podczas otwierania okna RL Generator:\n{ex.Message}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void OpenChatbot_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var chatbotWindow = _serviceProvider.GetRequiredService<Presentation.Views.ChatbotWindow>();
+            chatbotWindow.Show();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Błąd podczas otwierania okna Chatbota:\n{ex.Message}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 }

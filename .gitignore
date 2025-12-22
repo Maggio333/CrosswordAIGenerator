@@ -210,3 +210,29 @@ env/
 ENV/
 .venv/
 
+# ML Models and training artifacts
+*.safetensors
+*.pt
+*.pth
+*.bin
+*.ckpt
+*.h5
+*.pkl
+*.pth.tar
+**/checkpoint-*/
+**/adapter_model.safetensors
+**/adapter_config.json
+**/optimizer.pt
+**/scheduler.pt
+**/rng_state.pth
+**/trainer_state.json
+**/training_args.bin
+
+# Bielik model folders (keep only config files and scripts)
+PythonDatasetsScripts/bielik/bielik-crossword-qlora-*/adapter_model.safetensors
+PythonDatasetsScripts/bielik/bielik-crossword-qlora-*/adapter_config.json
+PythonDatasetsScripts/bielik/bielik-crossword-qlora-*/checkpoint-*/
+
+# Temporary/personal files (if needed)
+# *MasterMind*
+

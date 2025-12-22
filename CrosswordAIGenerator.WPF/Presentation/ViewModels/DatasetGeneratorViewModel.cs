@@ -11,6 +11,7 @@ using CrosswordAIGenerator.Core.Infrastructure.Services;
 using CrosswordAIGenerator.WPF.Infrastructure;
 using CrosswordAIGenerator.WPF.Presentation.ViewModels.Bases;
 using CrosswordAIGenerator.WPF.Presentation.Views;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 
 namespace CrosswordAIGenerator.WPF.Presentation.ViewModels;
@@ -146,16 +147,20 @@ public partial class DatasetGeneratorViewModel : BaseViewModel
         }
     }
 
+    private readonly IServiceProvider? _serviceProvider;
+
     public DatasetGeneratorViewModel(
         IEmptyGridGenerator gridGenerator,
         IXamlGenerator xamlGenerator,
         IScreenshotService screenshotService,
-        DatasetGenerator datasetGenerator)
+        DatasetGenerator datasetGenerator,
+        IServiceProvider? serviceProvider = null)
     {
         _gridGenerator = gridGenerator ?? throw new ArgumentNullException(nameof(gridGenerator));
         _xamlGenerator = xamlGenerator ?? throw new ArgumentNullException(nameof(xamlGenerator));
         _screenshotService = screenshotService ?? throw new ArgumentNullException(nameof(screenshotService));
         _datasetGenerator = datasetGenerator ?? throw new ArgumentNullException(nameof(datasetGenerator));
+        _serviceProvider = serviceProvider;
         
         StatusMessage = "Gotowy";
         
@@ -649,6 +654,24 @@ public partial class DatasetGeneratorViewModel : BaseViewModel
         finally
         {
             IsGenerating = false;
+        }
+    }
+
+    [RelayCommand]
+    private void OpenRLGenerator()
+    {
+        try
+        {
+            // Utwórz ViewModel dla okna RL
+            var rlViewModel = new RLDatasetGeneratorViewModel(_datasetGenerator);
+            
+            // Utwórz i pokaż okno
+            var rlWindow = new RLDatasetGeneratorWindow(rlViewModel);
+            rlWindow.Show();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Błąd podczas otwierania okna RL Generator:\n{ex.Message}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 }

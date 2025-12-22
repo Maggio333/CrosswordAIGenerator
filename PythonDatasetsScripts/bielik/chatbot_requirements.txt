@@ -1,0 +1,20 @@
+# Wymagania dla chatbota Bielika
+# Zawiera wszystkie zależności z requirements.txt + dodatkowe dla chatbota
+
+# Podstawowe zależności (z requirements.txt)
+torch>=2.0.0
+transformers>=4.35.0
+datasets>=2.14.0
+trl>=0.7.0
+peft>=0.6.0
+bitsandbytes>=0.41.0
+accelerate>=0.24.0
+
+# Dodatkowe dla chatbota
+flask>=2.3.0
+flask-cors>=4.0.0
+llama-cpp-python>=0.2.0
+
+# HuggingFace (dla tokenów)
+huggingface-hub>=0.19.0
+

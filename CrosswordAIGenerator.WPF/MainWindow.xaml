@@ -1,4 +1,4 @@
-﻿<Window x:Class="CrosswordAIGenerator.WPF.MainWindow"
+<Window x:Class="CrosswordAIGenerator.WPF.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -19,6 +19,8 @@
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="Narzędzia">
                 <MenuItem Header="Podgląd CrossGrid" Click="OpenCrossGridPreview_Click"/>
+                <MenuItem Header="Generator RL Dataset" Click="OpenRLGenerator_Click"/>
+                <MenuItem Header="Chatbot Bielika" Click="OpenChatbot_Click"/>
             </MenuItem>
         </Menu>
         

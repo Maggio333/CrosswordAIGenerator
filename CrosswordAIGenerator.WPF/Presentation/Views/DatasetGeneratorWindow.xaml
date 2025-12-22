@@ -163,6 +163,10 @@
                 <Button Grid.Row="1" Grid.Column="5" Content="Wyczyść" 
                         Command="{Binding ClearDataCommand}" 
                         Margin="5,10,0,0" Padding="10,5"/>
+                <Button Grid.Row="2" Grid.Column="0" Content="Generator RL" 
+                        Command="{Binding OpenRLGeneratorCommand}" 
+                        Margin="0,5,5,0" Padding="10,5"
+                        ToolTip="Otwórz okno generatora datasetów Reinforcement Learning"/>
             </Grid>
         </GroupBox>
 

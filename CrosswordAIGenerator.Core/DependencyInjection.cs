@@ -1,5 +1,7 @@
 using CrosswordAIGenerator.Core.Application.Services;
+using CrosswordAIGenerator.Core.Application.Services.RL;
 using CrosswordAIGenerator.Core.Domain.Services;
+using CrosswordAIGenerator.Core.Domain.Services.RL;
 using CrosswordAIGenerator.Core.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -134,6 +136,50 @@ public static class DependencyInjection
             return new Application.Services.CustomWordsDatasetGenerator(wordPlacer, xamlGenerator, descriptionGenerator, crossGridGenerator, logger, random);
         });
 
+        // RL Services - Reinforcement Learning dla krzyżówek
+        
+        // ICrosswordRLRewardCalculator - kalkulator nagród
+        services.AddSingleton<ICrosswordRLRewardCalculator>(serviceProvider =>
+        {
+            var logger = serviceProvider.GetService<ICursorLogger>();
+            return new CrosswordRLRewardCalculator(logger);
+        });
+
+        // ICrosswordRLEnvironment - środowisko RL
+        services.AddSingleton<ICrosswordRLEnvironment>(serviceProvider =>
+        {
+            var rewardCalculator = serviceProvider.GetRequiredService<ICrosswordRLRewardCalculator>();
+            var logger = serviceProvider.GetService<ICursorLogger>();
+            return new CrosswordRLEnvironment(rewardCalculator, logger);
+        });
+
+        // ICrosswordRLAdapter - adapter do konwersji stanów/akcji
+        services.AddSingleton<ICrosswordRLAdapter>(serviceProvider =>
+        {
+            var crossGridGenerator = serviceProvider.GetRequiredService<ICrossGridGenerator>();
+            var logger = serviceProvider.GetService<ICursorLogger>();
+            return new CrosswordRLAdapter(crossGridGenerator, logger);
+        });
+
+        // ICrosswordSelfPlayGenerator - generator gier self-play
+        services.AddSingleton<ICrosswordSelfPlayGenerator>(serviceProvider =>
+        {
+            var environment = serviceProvider.GetRequiredService<ICrosswordRLEnvironment>();
+            var wordDictionary = serviceProvider.GetRequiredService<IWordDictionary>();
+            var logger = serviceProvider.GetService<ICursorLogger>();
+            return new CrosswordSelfPlayGenerator(environment, wordDictionary, seed: null, logger);
+        });
+
+        // ICrosswordRLDatasetGenerator - generator datasetów RL
+        services.AddSingleton<ICrosswordRLDatasetGenerator>(serviceProvider =>
+        {
+            var selfPlayGenerator = serviceProvider.GetRequiredService<ICrosswordSelfPlayGenerator>();
+            var adapter = serviceProvider.GetRequiredService<ICrosswordRLAdapter>();
+            var crossGridGenerator = serviceProvider.GetRequiredService<ICrossGridGenerator>();
+            var logger = serviceProvider.GetService<ICursorLogger>();
+            return new CrosswordRLDatasetGenerator(selfPlayGenerator, adapter, crossGridGenerator, logger);
+        });
+
         // DatasetGenerator - orchestrator który deleguje do specjalistycznych serwisów
         services.AddSingleton<DatasetGenerator>(serviceProvider =>
         {
@@ -142,7 +188,15 @@ public static class DependencyInjection
             var customWordsGenerator = serviceProvider.GetRequiredService<ICustomWordsDatasetGenerator>();
             var exporter = serviceProvider.GetRequiredService<IDatasetExporter>();
             var crossGridGenerator = serviceProvider.GetService<ICrossGridGenerator>();
-            return new DatasetGenerator(emptyGridGenerator, wordsGenerator, customWordsGenerator, exporter, crossGridGenerator);
+            var rlDatasetGenerator = serviceProvider.GetService<ICrosswordRLDatasetGenerator>();
+            return new DatasetGenerator(emptyGridGenerator, wordsGenerator, customWordsGenerator, exporter, crossGridGenerator, rlDatasetGenerator);
+        });
+
+        // Chatbot Service - serwis do komunikacji z chatbotem Bielika
+        services.AddSingleton<IChatbotService>(serviceProvider =>
+        {
+            var logger = serviceProvider.GetService<ICursorLogger>();
+            return new Infrastructure.Services.ChatbotService(baseUrl: "http://localhost:5000", logger);
         });
 
         return services;
